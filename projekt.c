@@ -302,7 +302,7 @@ double potb = 1;*/
 
 fftw_complex zeropot(double x) {
   //return 30*x*x;
-  return 100*x*x;
+  return 10*x*x;
   //return 10*x*x*x*x;
   //return 10*x*x;
   //return 40*cosh(x);
@@ -335,13 +335,14 @@ fftw_complex fn(double x) {
   //double x0 = -1.941063416246160;
 
   //double k0 = 10;
-  double k0 = 0;
+  double k0 = 10;
   double xx = (x-x0) * (x-x0);
   return  exp(-xx/(aa))*cexp(I*k0*(x));
 }
 
 int main(/*int argc, char *argv[]*/) {
-  splitop_t * sop = splitop_new(4096, .0001, -25, 25, zeropot);
+  //splitop_t * sop = splitop_new(4096, .0001, -25, 25, zeropot);
+  splitop_t * sop = splitop_new(4096, .0004, -25, 25, zeropot);
 
   fftw_complex * psi = splitop_prepare(sop, fn);
 
@@ -382,7 +383,7 @@ int main(/*int argc, char *argv[]*/) {
 
   c = carray_append(c, cvect_skp(sop->bins, psi, sop->apsi));
 
-  for (int k = 1; k < 1200; k++) {
+  for (int k = 1; k < 12000; k++) {
     splitop_run(sop, 10, psi);
     c = carray_append(c, cvect_skp(sop->bins, psi, sop->apsi));
   }
@@ -405,6 +406,14 @@ int main(/*int argc, char *argv[]*/) {
   cairo_stroke(cr);
 
   {
+    FILE * fp = fopen("plotc.txt", "w"); assert(fp);
+    for (int k = 0; k < c->length; k++) {
+      fprintf(fp, "%.17e %.17e\n", creal(c->data[k]), cimag(c->data[k]));
+    }
+    fclose(fp);
+  }
+
+  {
     fftw_complex * ck = fftw_alloc_complex(c->length); assert(ck);
 
     fftw_plan p = fftw_plan_dft_1d(c->length, c->data, ck, FFTW_FORWARD, FFTW_ESTIMATE);
@@ -424,6 +433,14 @@ int main(/*int argc, char *argv[]*/) {
       printf("%g, %g\n", ck[k]);
     }
     cairo_stroke(cr);
+
+    {
+      FILE * fp = fopen("plotck.txt", "w"); assert(fp);
+      for (int k = 0; k < c->length; k++) {
+        fprintf(fp, "%.17e %.17e\n", creal(ck[k]), cimag(ck[k]));
+      }
+      fclose(fp);
+    }
 
     fftw_destroy_plan(p);
     fftw_free(ck);
