@@ -18,9 +18,10 @@ typedef struct {
   double       * V;
   fftw_complex * apsi;
   fftw_complex * eV;
+  fftw_complex * eVn;
   fftw_complex * ehV;
+  fftw_complex * ehVn;
   fftw_complex * eT;
-  fftw_complex * ehT;
   double         dt;
   double         dk;
   double         dx;
@@ -43,20 +44,21 @@ splitop_t * splitop_new(int bins, double dt, double min, double max, fftw_comple
     w->V[n] = V(min + w->dx*n);
   }
   w->eV = fftw_alloc_complex(bins); assert(w->eV);
+  w->eVn = fftw_alloc_complex(bins); assert(w->eVn);
   w->ehV = fftw_alloc_complex(bins); assert(w->ehV);
+  w->ehVn = fftw_alloc_complex(bins); assert(w->ehVn);
   for (int n = 0; n < bins; n++) {
     w->eV[n] = cexp(-I * w->V[n] * w->dt);
+    w->eVn[n] = w->eV[n] / bins;
     w->ehV[n] = cexp(-I * w->V[n] * w->dt / 2);
+    w->ehVn[n] = w->ehV[n] / bins;
   }
-  w->ehT = fftw_alloc_complex(bins); assert(w->ehT);
   w->eT = fftw_alloc_complex(bins); assert(w->eT);
   for (int n = 0; n < bins; n++) {
     if (n < bins/2) {
-      w->ehT[n] = cexp(-I * w->dk * w->dk * n * n * w->dt / 2);
       w->eT[n] = cexp(-I * w->dk * w->dk * n * n * w->dt);
     } else {
       int m = (n - bins);
-      w->ehT[n] = cexp(-I * w->dk * w->dk * m * m * w->dt / 2);
       w->eT[n] = cexp(-I * w->dk * w->dk * m * m * w->dt);
     }
   }
@@ -70,8 +72,10 @@ void splitop_free(splitop_t * w) {
   fftw_destroy_plan(w->bwd);
   fftw_free(w->V);
   fftw_free(w->eV);
+  fftw_free(w->eVn);
+  fftw_free(w->ehV);
+  fftw_free(w->ehVn);
   fftw_free(w->eT);
-  fftw_free(w->ehT);
   fftw_free(w->apsi);
   free(w);
 }
@@ -117,7 +121,8 @@ void splitop_run(splitop_t * w, int times, fftw_complex * psi) {
   int bins = w->bins;
   fftw_complex * eV = w->eV;
   fftw_complex * ehV = w->eV;
-  fftw_complex * ehT = w->ehT;
+  fftw_complex * eVn = w->eVn;
+  fftw_complex * ehVn = w->eVn;
   fftw_complex * eT = w->eT;
 
   double c = sqrt(bins);
@@ -136,8 +141,8 @@ void splitop_run(splitop_t * w, int times, fftw_complex * psi) {
   const double perm[2] = {-1,1};
 
   if (times > 0) {
-    for (int n = 0; n < bins; n++) { psi[n] *= ehV[n]; }
-
+    //for (int n = 0; n < bins; n++) { psi[n] *= ehV[n]; }
+    cvect_mult_asign(bins, psi, ehV);
 
     fftw_execute_dft(w->fwd, psi, psik);
     //for (int n = 0; n < bins; n++) { psik[n] *= eT[n]; }
@@ -145,7 +150,8 @@ void splitop_run(splitop_t * w, int times, fftw_complex * psi) {
 
     for (int k = 0; k < times - 1; k++) {
       fftw_execute_dft(w->bwd, psik, psi);
-      for (int n = 0; n < bins; n++) { psi[n] *= eV[n] / bins; }
+      //for (int n = 0; n < bins; n++) { psi[n] *= eVn[n]; }
+      cvect_mult_asign(bins, psi, eVn);
 
       fftw_execute_dft(w->fwd, psi, psik);
       //for (int n = 0; n < bins; n++) { psik[n] *= eT[n]; }
@@ -153,28 +159,10 @@ void splitop_run(splitop_t * w, int times, fftw_complex * psi) {
     }
 
     fftw_execute_dft(w->bwd, psik, psi);
-    for (int n = 0; n < bins; n++) { psi[n] *= ehV[n] / bins; }
+    //for (int n = 0; n < bins; n++) { psi[n] *= ehVn[n]; }
+    cvect_mult_asign(bins, psi, ehVn);
   }
 
-  /*if (times > 0) {
-    fftw_execute_dft(w->fwd, psi, psik);
-    for (int n = 0; n < bins; n++) { psik[n] *= ehT[n] / c; }
-
-    for (int k = 0; k < times - 1; k++) {
-      fftw_execute_dft(w->bwd, psik, psi);
-      for (int n = 0; n < bins; n++) { psi[n] *= eV[n] / c; }
-      fftw_execute_dft(w->fwd, psi, psik);
-      for (int n = 0; n < bins; n++) { psik[n] *= eT[n] / c; }
-    }
-
-    fftw_execute_dft(w->bwd, psik, psi);
-    for (int n = 0; n < bins; n++) { psi[n] *= eV[n] / c; }
-    fftw_execute_dft(w->fwd, psi, psik);
-    for (int n = 0; n < bins; n++) { psik[n] *= ehT[n] / c; }
-
-    fftw_execute_dft(w->bwd, psik, psi);
-    for (int n = 0; n < bins; n++) { psi[n] /= c; }
-  }*/
   fftw_free(psik);
 }
 
@@ -326,17 +314,17 @@ int main(/*int argc, char *argv[]*/) {
   cairo_surface_t * surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
   cairo_t *cr = cairo_create(surface);
 
-  /*splitop_draw(sop, cr, (cairo_rectangle_t){0, 0, width, height}, psi);
+  splitop_draw(sop, cr, (cairo_rectangle_t){0, 0, width, height}, psi);
   snprintf(buf, sizeof(buf), "image%05u.png", 0);
-  cairo_surface_write_to_png(surface, buf);*/
+  cairo_surface_write_to_png(surface, buf);
 
   for (int k = 1; k < 220; k++) {
     //fprintf(stderr, "##### %g, %u\n", cfnormsq(sop->bins, psi), k);
     fprintf(stderr, "##### %u\r", k);
     splitop_run(sop, 150, psi);
-    /*splitop_draw(sop, cr, (cairo_rectangle_t){0, 0, width, height}, psi);
+    splitop_draw(sop, cr, (cairo_rectangle_t){0, 0, width, height}, psi);
     snprintf(buf, sizeof(buf), "image%05u.png", k);
-    cairo_surface_write_to_png(surface, buf);*/
+    cairo_surface_write_to_png(surface, buf);
   }
 
   fprintf(stderr, "done---------\n");
