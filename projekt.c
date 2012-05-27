@@ -11,6 +11,58 @@
 
 /*************************************************************************************************/
 
+typedef struct carray {
+  int          alloc;
+  int          length;
+  fftw_complex data[];
+  // field elements are allocated after the array
+} carray_t;
+
+carray_t * carray_new_sized(int length, int alloc) {
+  assert(alloc > length);
+  carray_t * r = malloc(sizeof(carray_t) + sizeof(fftw_complex) * alloc);
+  if (!r) { abort(); }
+  r->length = length;
+  r->alloc = length;
+  return r;
+}
+
+carray_t * carray_append(carray_t * z, double x) {
+  if (z->length < z->alloc) {
+    z->data[z->length++] = x;
+    return z;
+  } else {
+    int alloc = (z->length+1) * 2;
+    carray_t * t = realloc(z, sizeof(carray_t) + sizeof(fftw_complex) * alloc); assert(t);
+    t->data[t->length++] = x;
+    t->alloc = alloc;
+    return t;
+  }
+}
+
+/*************************************************************************************************/
+
+double cabssq(fftw_complex z) {
+  double x = creal(z), y = cimag(z);
+  return x * x + y * y;
+}
+
+double cvect_normsq(int len, fftw_complex a[len]) {
+  double A = 0;
+  for (int k = 0; k < len; k++) A += cabssq(a[k]);
+  return A;
+}
+
+fftw_complex cvect_skp(int len, fftw_complex * a, fftw_complex * b) {
+  fftw_complex c = 0;
+  for (; len > 0 ; len--, a++, b++) {
+    c += conj(*a)* *b;
+  }
+  return c;
+}
+
+/*************************************************************************************************/
+
 typedef struct {
   int            bins;
   fftw_plan      fwd;
@@ -80,23 +132,13 @@ void splitop_free(splitop_t * w) {
   free(w);
 }
 
-double cabssq(fftw_complex z) {
-  double x = creal(z), y = cimag(z);
-  return x * x + y * y;
-}
-
-double cfnormsq(int len, fftw_complex a[len]) {
-  double A = 0;
-  for (int k = 0; k < len; k++) A += cabssq(a[k]);
-  return A;
-}
-
 #include <emmintrin.h>
 #include <smmintrin.h>
 
 /* a *= z */
 inline static void cvect_mult_asign(int len, fftw_complex * a, fftw_complex * z) {
   for (int n = 0; n < len; n++, a++, z++) {
+    //for (int n = 0; n < bins; n++) { a[n] *= z[n]; }
     double * va = (double *) a;
     double * vz = (double *) z;
     // (a0,a0)
@@ -119,13 +161,10 @@ inline static void cvect_mult_asign(int len, fftw_complex * a, fftw_complex * z)
 void splitop_run(splitop_t * w, int times, fftw_complex * psi) {
   fftw_complex * psik = fftw_alloc_complex(w->bins); assert(psik);
   int bins = w->bins;
-  fftw_complex * eV = w->eV;
-  fftw_complex * ehV = w->eV;
+  fftw_complex * ehV = w->ehV;
   fftw_complex * eVn = w->eVn;
-  fftw_complex * ehVn = w->eVn;
+  fftw_complex * ehVn = w->ehVn;
   fftw_complex * eT = w->eT;
-
-  double c = sqrt(bins);
 
   /*for (int k = 0; k < times; k++) {
     //for (int n = 0; n < bins; n++) { psi[n] *= ehV[n]; }
@@ -138,28 +177,21 @@ void splitop_run(splitop_t * w, int times, fftw_complex * psi) {
     for (p = psi, as = ehV, ae = as + bins; as < ae; as++, p++) { (*p) *= *as/bins; }
   }*/
 
-  const double perm[2] = {-1,1};
-
   if (times > 0) {
-    //for (int n = 0; n < bins; n++) { psi[n] *= ehV[n]; }
     cvect_mult_asign(bins, psi, ehV);
 
     fftw_execute_dft(w->fwd, psi, psik);
-    //for (int n = 0; n < bins; n++) { psik[n] *= eT[n]; }
     cvect_mult_asign(bins, psik, eT);
 
     for (int k = 0; k < times - 1; k++) {
       fftw_execute_dft(w->bwd, psik, psi);
-      //for (int n = 0; n < bins; n++) { psi[n] *= eVn[n]; }
       cvect_mult_asign(bins, psi, eVn);
 
       fftw_execute_dft(w->fwd, psi, psik);
-      //for (int n = 0; n < bins; n++) { psik[n] *= eT[n]; }
       cvect_mult_asign(bins, psik, eT);
     }
 
     fftw_execute_dft(w->bwd, psik, psi);
-    //for (int n = 0; n < bins; n++) { psi[n] *= ehVn[n]; }
     cvect_mult_asign(bins, psi, ehVn);
   }
 
@@ -171,7 +203,7 @@ fftw_complex * splitop_prepare(splitop_t * w, fftw_complex (*fn)(double x)) {
   for (int n = 0; n < w->bins; n++) {
     psi[n] = fn(w->min + w->dx * n);
   }
-  double A = cfnormsq(w->bins, psi);
+  double A = cvect_normsq(w->bins, psi);
   for (int n = 0; n < w->bins; n++) {
     psi[n] *= 1/sqrt(A);
   }
@@ -269,10 +301,16 @@ double potc = 30;
 double potb = 1;*/
 
 fftw_complex zeropot(double x) {
-  double b = potb * potb;
+  //return 30*x*x;
+  return 100*x*x;
+  //return 10*x*x*x*x;
+  //return 10*x*x;
+  //return 40*cosh(x);
+
+  /*double b = potb * potb;
   double l = x + pota;
   double r = x - pota;
-  return -potc*exp(-l*l/b)-potc*exp(-r*r/b);
+  return -potc*exp(-l*l/b)-potc*exp(-r*r/b);*/
 
   //return 40*(-1/sqrt(1+potb*pow(x-pota,2))-1/sqrt(1+potb*pow(x+pota,2)));
 
@@ -286,17 +324,20 @@ fftw_complex zeropot(double x) {
 }
 
 fftw_complex fn(double x) {
+  //double a = .2;
   double a = .5;
   double aa = a * a;
 
-  double x0 = -pota;
+  double x0 = 0;
+
+  //double x0 = -pota;
 
   //double x0 = -1.941063416246160;
 
+  //double k0 = 10;
   double k0 = 0;
   double xx = (x-x0) * (x-x0);
-  //return  exp(-xx/(aa))*cexp(I*k0*(x));
-  return  exp(-xx/(aa));
+  return  exp(-xx/(aa))*cexp(I*k0*(x));
 }
 
 int main(/*int argc, char *argv[]*/) {
@@ -311,6 +352,7 @@ int main(/*int argc, char *argv[]*/) {
   int width = 1000, height = 400;
   char buf[256];
 
+#if 0
   cairo_surface_t * surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
   cairo_t *cr = cairo_create(surface);
 
@@ -319,7 +361,7 @@ int main(/*int argc, char *argv[]*/) {
   cairo_surface_write_to_png(surface, buf);
 
   for (int k = 1; k < 220; k++) {
-    //fprintf(stderr, "##### %g, %u\n", cfnormsq(sop->bins, psi), k);
+    //fprintf(stderr, "##### %g, %u\n", cvect_normsq(sop->bins, psi), k);
     fprintf(stderr, "##### %u\r", k);
     splitop_run(sop, 150, psi);
     splitop_draw(sop, cr, (cairo_rectangle_t){0, 0, width, height}, psi);
@@ -331,6 +373,67 @@ int main(/*int argc, char *argv[]*/) {
 
   cairo_destroy(cr);
   cairo_surface_destroy(surface);
+#endif
+
+#if 1
+  printf("### %g, %g\n", cvect_skp(sop->bins, psi, psi));
+
+  carray_t * c = carray_new_sized(0, 1000*150);
+
+  c = carray_append(c, cvect_skp(sop->bins, psi, sop->apsi));
+
+  for (int k = 1; k < 1200; k++) {
+    splitop_run(sop, 10, psi);
+    c = carray_append(c, cvect_skp(sop->bins, psi, sop->apsi));
+  }
+  cairo_surface_t * surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+  cairo_t *cr = cairo_create(surface);
+
+  double yscale = (double) width / c->length;
+
+  cairo_set_source_rgb(cr, 1, 1, 1);
+  cairo_paint(cr);
+
+  cairo_set_line_width(cr, 2);
+  cairo_set_source_rgb(cr, 1, 0, 0);
+  for (int k = 0; k < c->length; k++) {
+    double x = k * yscale;
+    double y = height/4 - creal(c->data[k]) * height/4;
+    if (k == 0) { cairo_line_to(cr, x, y); } else { cairo_line_to(cr, x, y); }
+    //printf("%g, %g\n", c->data[k]);
+  }
+  cairo_stroke(cr);
+
+  {
+    fftw_complex * ck = fftw_alloc_complex(c->length); assert(ck);
+
+    fftw_plan p = fftw_plan_dft_1d(c->length, c->data, ck, FFTW_FORWARD, FFTW_ESTIMATE);
+    fftw_execute(p);
+
+    double cmax = 0;
+    for (int k = 0; k < c->length; k++) {
+      double z = cabs(ck[k]);
+      if (cmax < z) {cmax = z;}
+    }
+    cairo_set_line_width(cr, 2);
+    cairo_set_source_rgb(cr, 0, 0, 1);
+    for (int k = 0; k < c->length; k++) {
+      double x = k * yscale;
+      double y = height*3/4 - cabs(ck[k])/cmax * height/4;
+      if (k == 0) { cairo_line_to(cr, x, y); } else { cairo_line_to(cr, x, y); }
+      printf("%g, %g\n", ck[k]);
+    }
+    cairo_stroke(cr);
+
+    fftw_destroy_plan(p);
+    fftw_free(ck);
+  }
+
+  cairo_surface_write_to_png(surface, "plot.png");
+
+  cairo_destroy(cr);
+  cairo_surface_destroy(surface);
+#endif
 
   fftw_free(psi);
   splitop_free(sop);
