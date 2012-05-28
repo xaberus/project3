@@ -2,7 +2,8 @@
 
 set term pngcairo size 1500,500;
 set output "plotck.png"
-plot  "plotck.txt" using 1:(sqrt($2**2+$3**2)) w l
+plot  "plotck.txt" using 1:4 w l, "plotE.txt" u 1:(6) w i
+
 
 set term pngcairo size 1500,500;
 set output "plotc.png"
