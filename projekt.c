@@ -137,8 +137,8 @@ void splitop_free(splitop_t * w) {
 
 /* a *= z */
 inline static void cvect_mult_asign(int len, fftw_complex * a, fftw_complex * z) {
-  for (int n = 0; n < len; n++, a++, z++) {
-    //for (int n = 0; n < bins; n++) { a[n] *= z[n]; }
+  for (int n = 0; n < len; n++) { a[n] *= z[n]; }
+  /*for (int n = 0; n < len; n++, a++, z++) {
     double * va = (double *) a;
     double * vz = (double *) z;
     // (a0,a0)
@@ -155,7 +155,7 @@ inline static void cvect_mult_asign(int len, fftw_complex * a, fftw_complex * z)
     register __m128d tmp5 = _mm_mul_pd(tmp2, tmp3);
     register __m128d tmp6 = _mm_addsub_pd(tmp4, tmp5);
     _mm_store_pd(va, tmp6);
-  }
+  }*/
 }
 
 void splitop_run(splitop_t * w, int times, fftw_complex * psi) {
@@ -235,22 +235,24 @@ void splitop_draw(splitop_t * w, cairo_t * cr, cairo_rectangle_t rect, fftw_comp
   cairo_line_to(cr, rect.x + rect.width, rect.y + y0);
   cairo_stroke(cr);
 
-  double xscale = rect.width/w->bins, yscale, max;
+  int bins = w->bins;
+
+  double xscale = rect.width/bins, yscale, max;
 
   max = 0;
-  for (int n = 0; n < w->bins; n++) {
+  for (int n = 0; n < bins; n++) {
     double a = fabs(w->V[n]); if (max < a) { max = a; }
   }
   yscale = y0/max;
 
   cairo_set_source_rgb(cr, 0, 0, 0);
   cairo_move_to(cr, rect.x, y0);
-  for (int n = 0; n < w->bins; n++) { cairo_line_to(cr, rect.x + n * xscale, rect.y + y0 - w->V[n] * yscale); }
+  for (int n = 0; n < bins; n++) { cairo_line_to(cr, rect.x + n * xscale, rect.y + y0 - w->V[n] * yscale); }
   cairo_stroke(cr);
 
   fftw_complex * apsi = w->apsi;
   max = 0;
-  for (int n = 0; n < w->bins; n++) {
+  for (int n = 0; n < bins; n++) {
     double a = cabs(apsi[n]); if (max < a) { max = a; }
   }
   yscale = y0/(5*max/4);
@@ -258,30 +260,43 @@ void splitop_draw(splitop_t * w, cairo_t * cr, cairo_rectangle_t rect, fftw_comp
   cairo_set_line_width(cr, 1);
   cairo_set_source_rgb(cr, 0, 0, 1);
   cairo_move_to(cr, rect.x, y0);
-  for (int n = 0; n < w->bins; n++) { cairo_line_to(cr, rect.x + n * xscale, rect.y + y0 - cabs(apsi[n]) * yscale); }
+  for (int n = 0; n < bins; n++) { cairo_line_to(cr, rect.x + n * xscale, rect.y + y0 - cabs(apsi[n]) * yscale); }
   cairo_stroke(cr);
 
   cairo_set_line_width(cr, 2);
   cairo_set_source_rgb(cr, 1, 0, 0);
   cairo_move_to(cr, rect.x, y0);
-  for (int n = 0; n < w->bins; n++) { cairo_line_to(cr, rect.x + n * xscale, rect.y + y0 - cabs(psi[n]) * yscale); }
+  for (int n = 0; n < bins; n++) { cairo_line_to(cr, rect.x + n * xscale, rect.y + y0 - cabs(psi[n]) * yscale); }
   cairo_stroke(cr);
 
-  fftw_complex * psik = fftw_alloc_complex(w->bins); assert(psik);
+  fftw_complex * psik = fftw_alloc_complex(bins); assert(psik);
   fftw_execute_dft(w->fwd, psi, psik);
 
   max = 0;
-  for (int n = 0; n < w->bins; n++) {
+  for (int n = 0; n < bins; n++) {
     double a = cabs(psik[n]); if (max < a) { max = a; }
   }
   yscale = y0/(5*max/4);
 
   cairo_set_line_width(cr, 1);
   cairo_set_source_rgb(cr, 1, .5, 0);
+  /*cairo_move_to(cr, rect.x, y0);
+  for (int n = 0; n < bins; n++) {
+    int l = (n+bins/2)%w->bins;
+    cairo_line_to(cr, rect.x + (n-bins/3)*4 * xscale, rect.y + 2*y0 - cabs(psik[l]) * yscale);
+  }*/
   cairo_move_to(cr, rect.x, y0);
-  for (int n = 0; n < w->bins; n++) {
-    int l = (n+w->bins/2)%w->bins;
-    cairo_line_to(cr, rect.x + (n-w->bins/3)*4 * xscale, rect.y + 2*y0 - cabs(psik[l]) * yscale);
+  int dron = 1;
+  double reg = 1.0 / bins;
+  for (int k = bins/2; k < bins; k++) {
+    double x = rect.x + rect.width/2 + (k-bins) * reg * rect.width;
+    double y = rect.y + 2*y0 - cabs(psik[k]) * yscale;
+    if (dron) { cairo_move_to(cr, x, y); dron = 0; } else { cairo_line_to(cr, x, y); }
+  }
+  for (int k = 0; k < bins/2; k++) {
+    double x = rect.x + rect.width/2 + k * reg * rect.width;
+    double y = rect.y + 2*y0 - cabs(psik[k]) * yscale;
+    cairo_line_to(cr, x, y);
   }
   cairo_stroke(cr);
 
@@ -301,8 +316,9 @@ double potc = 30;
 double potb = 1;*/
 
 fftw_complex zeropot(double x) {
+  double r = fabs(x); return r < 6 ? 0 : 1000000000;
   //return 30*x*x;
-  return 10*x*x;
+  //return 10*x*x; // <-- good one
   //return 10*x*x*x*x;
   //return 10*x*x;
   //return 40*cosh(x);
@@ -334,15 +350,16 @@ fftw_complex fn(double x) {
 
   //double x0 = -1.941063416246160;
 
-  //double k0 = 10;
-  double k0 = 10;
+  //double k0 = 10; // <-- good one
+  double k0 = 1;
   double xx = (x-x0) * (x-x0);
   return  exp(-xx/(aa))*cexp(I*k0*(x));
 }
 
 int main(/*int argc, char *argv[]*/) {
   //splitop_t * sop = splitop_new(4096, .0001, -25, 25, zeropot);
-  splitop_t * sop = splitop_new(4096, .0004, -25, 25, zeropot);
+  //splitop_t * sop = splitop_new(4096, .0004, -25, 25, zeropot); // <-- good one
+  splitop_t * sop = splitop_new(4096, .0001, -25, 25, zeropot);
 
   fftw_complex * psi = splitop_prepare(sop, fn);
 
@@ -351,9 +368,9 @@ int main(/*int argc, char *argv[]*/) {
   //splitop_run(sop, 1, psi);
 
   int width = 1000, height = 400;
-  char buf[256];
 
-#if 0
+#ifdef P4
+  char buf[256];
   cairo_surface_t * surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
   cairo_t *cr = cairo_create(surface);
 
@@ -376,7 +393,7 @@ int main(/*int argc, char *argv[]*/) {
   cairo_surface_destroy(surface);
 #endif
 
-#if 1
+#ifdef P3
   printf("### %g, %g\n", cvect_skp(sop->bins, psi, psi));
 
   carray_t * c = carray_new_sized(0, 1000*150);
@@ -408,7 +425,8 @@ int main(/*int argc, char *argv[]*/) {
   {
     FILE * fp = fopen("plotc.txt", "w"); assert(fp);
     for (int k = 0; k < c->length; k++) {
-      fprintf(fp, "%.17e %.17e\n", creal(c->data[k]), cimag(c->data[k]));
+      fprintf(fp, "%.17e, %.17e %.17e\n",
+        k * 10 * sop->dt, creal(c->data[k]), cimag(c->data[k]));
     }
     fclose(fp);
   }
@@ -428,16 +446,28 @@ int main(/*int argc, char *argv[]*/) {
     cairo_set_source_rgb(cr, 0, 0, 1);
     for (int k = 0; k < c->length; k++) {
       double x = k * yscale;
-      double y = height*3/4 - cabs(ck[k])/cmax * height/4;
-      if (k == 0) { cairo_line_to(cr, x, y); } else { cairo_line_to(cr, x, y); }
-      printf("%g, %g\n", ck[k]);
+      double y = height*3/4 - cabs(ck[k])/cmax * height/4 / sqrt(c->length);
+      if (k == 0) { cairo_move_to(cr, x, y); } else { cairo_line_to(cr, x, y); }
+      //printf("%g, %g\n", ck[k]);
     }
     cairo_stroke(cr);
 
     {
       FILE * fp = fopen("plotck.txt", "w"); assert(fp);
-      for (int k = 0; k < c->length; k++) {
+      /*for (int k = 0; k < c->length; k++) {
         fprintf(fp, "%.17e %.17e\n", creal(ck[k]), cimag(ck[k]));
+      }*/
+      int length = c->length;
+      double reg = 1.0 / length;
+      double nor = 1/sqrt(length);
+      for (int k = 0; k < length; k++) { ck[k] *= nor; }
+      for (int k = length/2; k < length; k++) {
+        fprintf(fp, "%.17e %.17e %.17e %.17e\n",
+          (k-length) * reg, creal(ck[k]), cimag(ck[k]), cabs(ck[k]));
+      }
+      for (int k = 0; k < length/2; k++) {
+        fprintf(fp, "%.17e %.17e %.17e %.17e\n",
+          k * reg, creal(ck[k]), cimag(ck[k]), cabs(ck[k]));
       }
       fclose(fp);
     }
