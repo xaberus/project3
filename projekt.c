@@ -27,7 +27,7 @@ carray_t * carray_new_sized(int length, int alloc) {
   return r;
 }
 
-carray_t * carray_append(carray_t * z, double x) {
+carray_t * carray_append(carray_t * z, fftw_complex x) {
   if (z->length < z->alloc) {
     z->data[z->length++] = x;
     return z;
@@ -137,8 +137,8 @@ void splitop_free(splitop_t * w) {
 
 /* a *= z */
 inline static void cvect_mult_asign(int len, fftw_complex * a, fftw_complex * z) {
-  for (int n = 0; n < len; n++) { a[n] *= z[n]; }
-  /*for (int n = 0; n < len; n++, a++, z++) {
+  //for (int n = 0; n < len; n++) { a[n] *= z[n]; }
+  for (int n = 0; n < len; n++, a++, z++) {
     double * va = (double *) a;
     double * vz = (double *) z;
     // (a0,a0)
@@ -155,7 +155,7 @@ inline static void cvect_mult_asign(int len, fftw_complex * a, fftw_complex * z)
     register __m128d tmp5 = _mm_mul_pd(tmp2, tmp3);
     register __m128d tmp6 = _mm_addsub_pd(tmp4, tmp5);
     _mm_store_pd(va, tmp6);
-  }*/
+  }
 }
 
 void splitop_run(splitop_t * w, int times, fftw_complex * psi) {
@@ -307,6 +307,54 @@ void splitop_draw(splitop_t * w, cairo_t * cr, cairo_rectangle_t rect, fftw_comp
 
 /*************************************************************************************************/
 
+//#define HARMOSZ
+#define BOX
+
+#ifdef HARMOSZ
+fftw_complex zeropot(double x) {
+  return 10*x*x;
+}
+fftw_complex fn(double x) {
+  //double a = .2;
+  double a = .5;
+  double aa = a * a;
+  double x0 = 0;
+  double k0 = 10; // <-- good one
+  double xx = (x-x0) * (x-x0);
+  return  exp(-xx/(aa))*cexp(I*k0*(x));
+}
+#endif
+#ifdef BOX
+double pota = 4;
+fftw_complex zeropot(double x) {
+  double r = fabs(x);
+  return r < pota ? 0 : 10000;
+}
+/*fftw_complex fn(double x) {
+  //double a = .2;
+  double a = .1;
+  double aa = a * a;
+  double x0 = 0;
+  //double k0 = 10;
+  double k0 = 0;
+  double xx = (x-x0) * (x-x0);
+  return  exp(-xx/(aa))*cexp(I*k0*(x));
+}*/
+fftw_complex fn(double x) {
+  //double a = .2;
+  double a = .1;
+  double aa = a * a;
+  double x0 = 0;
+  //double k0 = 10;
+  double k0 = 0;
+  double xx = (x-x0) * (x-x0);
+  return  //exp(-x*x/(.1))
+    + I * exp(-x*x/(.2*.2)) * sin(x)
+    ;
+}
+#endif
+
+#if 0
 double pota = 0.9;
 //double pota = 3;
 double potb = 1;
@@ -314,11 +362,10 @@ double potc = 30;
 
 /*double pota = 2;
 double potb = 1;*/
-
 fftw_complex zeropot(double x) {
-  double r = fabs(x); return r < 6 ? 0 : 1000000000;
+  //double r = fabs(x); return r < 6 ? 0 : 1000000000;
   //return 30*x*x;
-  //return 10*x*x; // <-- good one
+  return 10*x*x; // <-- good one
   //return 10*x*x*x*x;
   //return 10*x*x;
   //return 40*cosh(x);
@@ -350,16 +397,22 @@ fftw_complex fn(double x) {
 
   //double x0 = -1.941063416246160;
 
-  //double k0 = 10; // <-- good one
-  double k0 = 1;
+  double k0 = 10; // <-- good one
+  //double k0 = 1;
   double xx = (x-x0) * (x-x0);
   return  exp(-xx/(aa))*cexp(I*k0*(x));
 }
+#endif
 
 int main(/*int argc, char *argv[]*/) {
   //splitop_t * sop = splitop_new(4096, .0001, -25, 25, zeropot);
-  //splitop_t * sop = splitop_new(4096, .0004, -25, 25, zeropot); // <-- good one
-  splitop_t * sop = splitop_new(4096, .0001, -25, 25, zeropot);
+#ifdef HARMOSZ
+  splitop_t * sop = splitop_new(4096, .0004, -25, 25, zeropot); // <-- good one
+#endif
+#ifdef BOX
+  splitop_t * sop = splitop_new(4096, .0001, -25, 25, zeropot); // <-- good one
+#endif
+  //splitop_t * sop = splitop_new(4096, .0001, -25, 25, zeropot);
 
   fftw_complex * psi = splitop_prepare(sop, fn);
 
@@ -453,22 +506,25 @@ int main(/*int argc, char *argv[]*/) {
     cairo_stroke(cr);
 
     {
-      FILE * fp = fopen("plotck.txt", "w"); assert(fp);
-      /*for (int k = 0; k < c->length; k++) {
-        fprintf(fp, "%.17e %.17e\n", creal(ck[k]), cimag(ck[k]));
-      }*/
       int length = c->length;
-      double reg = 1.0 / length;
       double nor = 1/sqrt(length);
       for (int k = 0; k < length; k++) { ck[k] *= nor; }
-      for (int k = length/2; k < length; k++) {
+      FILE * fp = fopen("plotck.txt", "w"); assert(fp);
+      double dom = 2*M_PI/(sop->dt*10*c->length);
+      for (int k = 0; k < c->length; k++) {
         fprintf(fp, "%.17e %.17e %.17e %.17e\n",
-          (k-length) * reg, creal(ck[k]), cimag(ck[k]), cabs(ck[k]));
+          k * dom, creal(ck[k]), cimag(ck[k]), cabs(ck[k]));
       }
-      for (int k = 0; k < length/2; k++) {
-        fprintf(fp, "%.17e %.17e %.17e %.17e\n",
-          k * reg, creal(ck[k]), cimag(ck[k]), cabs(ck[k]));
+      fclose(fp);
+    }
+    {
+      FILE * fp = fopen("plotE.txt", "w"); assert(fp);
+#ifdef BOX
+      double L = 2 * pota;
+      for (int k = 0; k < c->length; k++) {
+        fprintf(fp, "%.17e\n", M_PI * M_PI * k * k / (L * L));
       }
+#endif
       fclose(fp);
     }
 
