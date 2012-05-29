@@ -1,5 +1,11 @@
 
-all: projekt
+all: projekt3 projekt4
+
+
+movie.webm: .projekt4
+	rm -f movie.webm
+	ffmpeg -r 10 -b 9600 -i image%05d.png movie.webm
+	rm -f image*.png
 
 movie.mp4: .projekt4
 	rm -f movie.mp4
@@ -18,10 +24,10 @@ plotc.png plotck.png: plotck.txt plots.gp
 
 
 projekt3: projekt.c
-	gcc -DP3 -O3 -g -msse4 -std=gnu99 -Wall -Wextra projekt.c `pkg-config --cflags --libs fftw3 cairo` -o projekt3
+	gcc -DP3 -O3 -g -msse4 -std=gnu99 -Wall -Wextra projekt.c -lfftw3_threads  `pkg-config --cflags --libs fftw3 cairo` -o projekt3
 
 projekt4: projekt.c
-	gcc -DP4 -O3 -g -msse4 -std=gnu99 -Wall -Wextra projekt.c `pkg-config --cflags --libs fftw3 cairo` -o projekt4
+	gcc -DP4 -O3 -g -msse4 -std=gnu99 -Wall -Wextra projekt.c -lfftw3_threads  `pkg-config --cflags --libs fftw3 cairo` -o projekt4
 
 clean:
 	rm -f projekt3
