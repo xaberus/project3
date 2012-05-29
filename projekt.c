@@ -180,14 +180,26 @@ void splitop_run(splitop_t * w, int times, fftw_complex * psi) {
   if (times > 0) {
     cvect_mult_asign(bins, psi, ehV);
 
+    // for (int k = 0; k < bins; k++) { psi[k] *= .5 * (1 - cos(2*M_PI*k/bins)); }
+
     fftw_execute_dft(w->fwd, psi, psik);
+
+    // double ren = 1/sqrt(cvect_normsq(bins, psik))*sqrt(bins);
+    // for (int k = 0; k < bins; k++) { psik[k] *= ren; }
+
     cvect_mult_asign(bins, psik, eT);
 
     for (int k = 0; k < times - 1; k++) {
       fftw_execute_dft(w->bwd, psik, psi);
       cvect_mult_asign(bins, psi, eVn);
 
+      // for (int k = 0; k < bins; k++) { psi[k] *= .5 * (1 - cos(2*M_PI*k/bins)); }
+
       fftw_execute_dft(w->fwd, psi, psik);
+
+      // double ren = 1/sqrt(cvect_normsq(bins, psik))*sqrt(bins);
+      // for (int k = 0; k < bins; k++) { psik[k] *= ren; }
+
       cvect_mult_asign(bins, psik, eT);
     }
 
@@ -307,12 +319,15 @@ void splitop_draw(splitop_t * w, cairo_t * cr, cairo_rectangle_t rect, fftw_comp
 
 /*************************************************************************************************/
 
-//#define HARMOSZ
-#define BOX
+//#define HANN
+
+#define HARMOSZ
+//#define BOX
 
 #ifdef HARMOSZ
+double omega = 4;
 fftw_complex zeropot(double x) {
-  return 10*x*x;
+  return omega*x*x;
 }
 fftw_complex fn(double x) {
   //double a = .2;
@@ -340,17 +355,19 @@ fftw_complex zeropot(double x) {
   double xx = (x-x0) * (x-x0);
   return  exp(-xx/(aa))*cexp(I*k0*(x));
 }*/
-fftw_complex fn(double x) {
-  //double a = .2;
-  double a = .1;
-  double aa = a * a;
-  double x0 = 0;
-  //double k0 = 10;
-  double k0 = 0;
-  double xx = (x-x0) * (x-x0);
+/*fftw_complex fn(double x) {
   return  //exp(-x*x/(.1))
     + I * exp(-x*x/(.2*.2)) * sin(x)
     ;
+}*/
+fftw_complex fn(double x) {
+  //double a = .2;
+  double a = .5;
+  double aa = a * a;
+  double x0 = 0;
+  double k0 = 10; // <-- good one
+  double xx = (x-x0) * (x-x0);
+  return  exp(-xx/(aa))*cexp(I*k0*(x));
 }
 #endif
 
@@ -432,8 +449,8 @@ int main(/*int argc, char *argv[]*/) {
   cairo_surface_write_to_png(surface, buf);
 
   for (int k = 1; k < 220; k++) {
-    //fprintf(stderr, "##### %g, %u\n", cvect_normsq(sop->bins, psi), k);
-    fprintf(stderr, "##### %u\r", k);
+    fprintf(stderr, "##### %g, %u\n", cvect_normsq(sop->bins, psi), k);
+    //fprintf(stderr, "##### %u\r", k);
     splitop_run(sop, 150, psi);
     splitop_draw(sop, cr, (cairo_rectangle_t){0, 0, width, height}, psi);
     snprintf(buf, sizeof(buf), "image%05u.png", k);
@@ -447,7 +464,7 @@ int main(/*int argc, char *argv[]*/) {
 #endif
 
 #ifdef P3
-  printf("### %g, %g\n", cvect_skp(sop->bins, psi, psi));
+  //printf("### %g, %g\n", cvect_skp(sop->bins, psi, psi));
 
   carray_t * c = carray_new_sized(0, 1000*150);
 
@@ -478,35 +495,42 @@ int main(/*int argc, char *argv[]*/) {
   {
     FILE * fp = fopen("plotc.txt", "w"); assert(fp);
     for (int k = 0; k < c->length; k++) {
-      fprintf(fp, "%.17e, %.17e %.17e\n",
-        k * 10 * sop->dt, creal(c->data[k]), cimag(c->data[k]));
+      fprintf(fp, "%.17e %.17e %.17e %.17e\n",
+        k * 10 * sop->dt, creal(c->data[k]), cimag(c->data[k]), cabs(c->data[k]));
     }
     fclose(fp);
   }
 
-  {
-    fftw_complex * ck = fftw_alloc_complex(c->length); assert(ck);
+  int length = c->length;
 
-    fftw_plan p = fftw_plan_dft_1d(c->length, c->data, ck, FFTW_FORWARD, FFTW_ESTIMATE);
+  {
+    fftw_complex * ck = fftw_alloc_complex(length); assert(ck);
+
+#ifdef HANN
+    // Hann Fenster:
+    double hannfkt = 2 * M_PI/(length);
+    for (int k = 0; k < length; k++) { c->data[k] *= .5 * (1 - cos(hannfkt * k)); }
+#endif
+
+    fftw_plan p = fftw_plan_dft_1d(length, c->data, ck, FFTW_FORWARD, FFTW_ESTIMATE);
     fftw_execute(p);
 
     double cmax = 0;
-    for (int k = 0; k < c->length; k++) {
+    for (int k = 0; k < length; k++) {
       double z = cabs(ck[k]);
       if (cmax < z) {cmax = z;}
     }
     cairo_set_line_width(cr, 2);
     cairo_set_source_rgb(cr, 0, 0, 1);
-    for (int k = 0; k < c->length; k++) {
+    for (int k = 0; k < length; k++) {
       double x = k * yscale;
-      double y = height*3/4 - cabs(ck[k])/cmax * height/4 / sqrt(c->length);
+      double y = height*3/4 - cabs(ck[k])/cmax * height/4 / sqrt(length);
       if (k == 0) { cairo_move_to(cr, x, y); } else { cairo_line_to(cr, x, y); }
       //printf("%g, %g\n", ck[k]);
     }
     cairo_stroke(cr);
 
     {
-      int length = c->length;
       double nor = 1/sqrt(length);
       for (int k = 0; k < length; k++) { ck[k] *= nor; }
       FILE * fp = fopen("plotck.txt", "w"); assert(fp);
@@ -519,6 +543,12 @@ int main(/*int argc, char *argv[]*/) {
     }
     {
       FILE * fp = fopen("plotE.txt", "w"); assert(fp);
+#ifdef HARMOSZ
+      double A = sqrt(4 * omega);
+      for (int k = 0; k < c->length; k++) {
+        fprintf(fp, "%.17e\n", A * (0.5 + k));
+      }
+#endif
 #ifdef BOX
       double L = 2 * pota;
       for (int k = 0; k < c->length; k++) {
