@@ -9,3 +9,7 @@ plotck.txt
 projekt3
 projekt4
 plotE.txt
+CMakeCache.txt
+CMakeFiles/*
+cmake_install.cmake
+Makefile
