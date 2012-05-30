@@ -4,6 +4,14 @@
 
 #include "carray.h"
 
+carray_t * carray_new(int length) {
+  carray_t * r = malloc(sizeof(carray_t) + sizeof(complex double) * length);
+  if (!r) { abort(); }
+  r->length = length;
+  r->alloc = length;
+  return r;
+}
+
 carray_t * carray_new_sized(int length, int alloc) {
   assert(alloc > length);
   carray_t * r = malloc(sizeof(carray_t) + sizeof(complex double) * alloc);

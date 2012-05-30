@@ -9,9 +9,13 @@
 
 //#include <cairo.h>
 
-#include "expr.h"
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
+
 #include "splitop.h"
 #include "cvect.h"
+#include "array.h"
 #include "carray.h"
 
 /*************************************************************************************************/
@@ -350,27 +354,176 @@ int nomain(/*int argc, char *argv[]*/) {
 }
 #endif
 
-int main() {
-  char buf[] =
-    "b = 1;"
-    "a = b;"
-    "u = 2 + a;"
-    "bar(x,y,z):=x^y^z;"
-    "f(x,y,z):=z*y*x + bar(1,2,b) + u;"
-    "g(x,y,z):=z*y*x + bar(3,2,2) + u;"
-    "d = 3;"
-    //"f(x):=(a+b-c*123)^43645.234 + 2e6;"
-    ;
-  token_t * tokens = exprlexer_tokenize(buf);
-  ast_t * ast = ast_new(tokens);
+typedef struct {
+  int        config;
+  int        bins;
+  double     dt;
+  struct {
+    double min;
+    double max;
+  } range;
+  int        steps;
+  int        runs;
+  int        vstep;
+  int        vframes;
+  array_t  * xpos;
+  array_t  * potential;
+  carray_t * psi;
 
-  funcdef_t * fn = ast_get_func(ast, "g");
+  int        tsteps;
+  double     dx;
+  double     dk;
+  double     dE;
+} preferences_t;
 
-  double args[3] = {3,3,3};
+void prepare_simulation(lua_State * L, preferences_t * prefs) {
+  lua_settop(L, 0);
+  lua_rawgeti(L, LUA_REGISTRYINDEX, prefs->config);
+  int config = lua_gettop(L);
 
-  ast_eval(ast, fn, 3, args);
+  printf("configuration: \n");
 
-  ast_free(ast);
+  lua_getfield(L, config, "bins");
+  if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, bins undefined\n"); return; }
+  prefs->bins = lua_tointeger(L, -1); lua_pop(L, 1);
+  printf("  bins:    %d\n", prefs->bins);
+
+  lua_getfield(L, config, "dt");
+  if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, dt undefined\n"); return; }
+  prefs->dt = lua_tonumber(L, -1); lua_pop(L, 1);
+  printf("  dt:      %g\n", prefs->dt);
+
+  {
+    lua_getfield(L, config, "range");
+    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, range undefined\n"); return; }
+    int range = lua_gettop(L);
+    lua_rawgeti(L, range, 1);
+    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, range.min undefined\n"); return; }
+    prefs->range.min = lua_tonumber(L, -1); lua_pop(L, 1);
+    lua_rawgeti(L, range, 2);
+    prefs->range.max = lua_tonumber(L, -1);
+    lua_pop(L, 1);
+  }
+  printf("  range:   [%g;%g]\n", prefs->range.min, prefs->range.max);
+
+  lua_getfield(L, config, "steps");
+  if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, steps undefined\n"); return; }
+  prefs->steps = lua_tointeger(L, -1); lua_pop(L, 1);
+  printf("  steps:   %d\n", prefs->steps);
+
+  lua_getfield(L, config, "vstep");
+  if (!lua_isnil(L, -1)) {
+    prefs->vstep = lua_tointeger(L, -1);
+  } else {
+    prefs->vstep = -1;
+  }
+  lua_pop(L, 1);
+  lua_getfield(L, config, "vframes");
+  if (!lua_isnil(L, -1)) {
+    prefs->vframes = lua_tointeger(L, -1);
+  } else {
+    prefs->vframes = -1;
+  }
+  lua_pop(L, 1);
+  if (prefs->vstep > 0 && prefs->vframes > 0) {
+    printf("  will render video with:\n");
+    printf("    vstep:       %d\n", prefs->vstep);
+    printf("    vframes:     %d\n", prefs->vframes);
+  }
+
+  lua_getfield(L, config, "runs");
+  if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, runs undefined\n"); return; }
+  prefs->runs = lua_tointeger(L, -1); lua_pop(L, 1);
+  printf("  runs:    %d\n", prefs->runs);
+
+  array_t * xpos = array_equipart(prefs->range.min, prefs->range.max, prefs->bins);
+  prefs->xpos = xpos;
+
+  {
+    lua_getfield(L, config, "potential");
+    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, potential undefined\n"); return; }
+    int potential = lua_gettop(L);
+
+    array_t * V = array_new(xpos->length);
+
+    for (int k = 0; k < xpos->length; k++) {
+      lua_pushvalue(L, potential);
+      lua_pushnumber(L, xpos->data[k]);
+      lua_call(L, 1, 1);
+      assert(lua_isnumber(L, -1));
+      V->data[k] = lua_tonumber(L, -1);
+      lua_pop(L, 1);
+      //printf("potential(%g) = %g\n", xpos->data[k], V->data[k]);
+    }
+    lua_pop(L, 1);
+    prefs->potential = V;
+  }
+  printf("  potential(x)\n");
+
+  {
+    lua_getfield(L, config, "psi");
+    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, psi undefined\n"); return; }
+    int psi = lua_gettop(L);
+
+    carray_t * F = carray_new(xpos->length);
+
+    for (int k = 0; k < xpos->length; k++) {
+      lua_pushvalue(L, psi);
+      lua_pushnumber(L, xpos->data[k]);
+      lua_call(L, 1, 1);
+      assert(lua_istable(L, -1));
+      int tab = lua_gettop(L);
+      lua_rawgeti(L, tab, 1);
+      double x = lua_tonumber(L, -1);
+      lua_pop(L, 1);
+      lua_rawgeti(L, tab, 2);
+      double y = lua_tonumber(L, -1);
+      lua_pop(L, 2);
+      F->data[k] = x + I * y;
+      //printf("psi(%g) = %g + i %g\n", xpos->data[k], x, y);
+    }
+    lua_pop(L, 1);
+    prefs->psi = F;
+  }
+  printf("  psi(x)\n");
+
+  printf("  derrived values are:\n");
+  prefs->tsteps =  prefs->steps * prefs->runs;
+  printf("    tsteps:      %d\n", prefs->tsteps);
+
+  prefs->dx = prefs->xpos->data[1] - prefs->xpos->data[0];
+  printf("    dx:          %g\n", prefs->dx);
+
+  prefs->dE = 2 * M_PI / (prefs->dt * prefs->tsteps);
+  printf("    dE:          %g\n", prefs->dE);
+
+}
+
+int main(int argc, char * argv[argc]) {
+
+  if (argc < 2) {
+    fprintf(stderr, "usage: %s config.lua\n", argv[0]);
+    return -1;
+  }
+
+  preferences_t prefs = {0};
+
+  lua_State * L = luaL_newstate();
+  luaL_openlibs(L);
+
+  if (luaL_dofile(L, argv[1])) {
+    fprintf(stderr, "could not load '%s' : %s\n", argv[1], lua_tostring(L, 1));
+  } else {
+    lua_getfield(L, LUA_GLOBALSINDEX, "config");
+    if (lua_isnil(L, -1)) {
+      fprintf(stderr, "table config undefined\n");
+    } else {
+      prefs.config = luaL_ref(L, LUA_REGISTRYINDEX);
+      prepare_simulation(L, &prefs);
+    }
+  }
+
+  lua_close(L);
 
   return 0;
 }

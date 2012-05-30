@@ -10,6 +10,7 @@ typedef struct carray {
   // field elements are allocated after the array
 } carray_t;
 
+carray_t * carray_new(int length);
 carray_t * carray_new_sized(int length, int alloc);
 carray_t * carray_append(carray_t * z, complex double x);
 

@@ -9,7 +9,7 @@ include(FindPkgConfig)
 #include_directories()
 
 #pkg_check_modules(PKG REQUIRED "cairo" "fftw3")
-pkg_check_modules(PKG REQUIRED "fftw3")
+pkg_check_modules(PKG REQUIRED "fftw3" "lua")
 
 set(CFLAGS_LIST
   "-std=gnu99"
@@ -52,13 +52,10 @@ string (REPLACE ";" " " CFLAGS "${CFLAGS_LIST}")
 string (REPLACE ";" " " LFLAGS "${LFLAGS_LIST}")
 
 add_executable(projekt3
-  ${projekt_SOURCE_DIR}/hashmap.c
   ${projekt_SOURCE_DIR}/projekt.c
   ${projekt_SOURCE_DIR}/splitop.c
   ${projekt_SOURCE_DIR}/carray.c
-  ${projekt_SOURCE_DIR}/expr_parser.c
-  ${projekt_SOURCE_DIR}/lexer.c
-  ${projekt_SOURCE_DIR}/expr.c
+  ${projekt_SOURCE_DIR}/array.c
 )
 set_target_properties(projekt3 PROPERTIES COMPILE_FLAGS ${CFLAGS})
 set_target_properties(projekt3 PROPERTIES LINK_FLAGS ${LFLAGS})
