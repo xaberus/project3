@@ -18,6 +18,8 @@
 #include "array.h"
 #include "carray.h"
 
+#include "simulation.h"
+
 /*************************************************************************************************/
 
 #if 0
@@ -354,149 +356,114 @@ int nomain(/*int argc, char *argv[]*/) {
 }
 #endif
 
-typedef struct {
-  int        config;
-  int        bins;
-  double     dt;
-  struct {
-    double min;
-    double max;
-  } range;
-  int        steps;
-  int        runs;
-  int        vstep;
-  int        vframes;
-  array_t  * xpos;
-  array_t  * potential;
-  carray_t * psi;
+int start_simulation(preferences_t * prefs) {
+  fftw_init_threads();
+  fftw_plan_with_nthreads(2);
 
-  int        tsteps;
-  double     dx;
-  double     dk;
-  double     dE;
-} preferences_t;
+  printf("starting simulation: \n");
 
-void prepare_simulation(lua_State * L, preferences_t * prefs) {
-  lua_settop(L, 0);
-  lua_rawgeti(L, LUA_REGISTRYINDEX, prefs->config);
-  int config = lua_gettop(L);
+  splitop_t * sop = splitop_new(prefs);
 
-  printf("configuration: \n");
+  splitop_prepare(sop);
+  printf("  split operator ceated\n");
 
-  lua_getfield(L, config, "bins");
-  if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, bins undefined\n"); return; }
-  prefs->bins = lua_tointeger(L, -1); lua_pop(L, 1);
-  printf("  bins:    %d\n", prefs->bins);
+  results_t * res = results_new(); prefs->results = res;
 
-  lua_getfield(L, config, "dt");
-  if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, dt undefined\n"); return; }
-  prefs->dt = lua_tonumber(L, -1); lua_pop(L, 1);
-  printf("  dt:      %g\n", prefs->dt);
+  int bins = prefs->bins;
+  int runs = prefs->runs;
+  int steps= prefs->steps;
+  int length = runs + 1;
 
-  {
-    lua_getfield(L, config, "range");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, range undefined\n"); return; }
-    int range = lua_gettop(L);
-    lua_rawgeti(L, range, 1);
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, range.min undefined\n"); return; }
-    prefs->range.min = lua_tonumber(L, -1); lua_pop(L, 1);
-    lua_rawgeti(L, range, 2);
-    prefs->range.max = lua_tonumber(L, -1);
-    lua_pop(L, 1);
-  }
-  printf("  range:   [%g;%g]\n", prefs->range.min, prefs->range.max);
+  carray_t * c = carray_new_sized(0, length);
+  carray_t * ck = carray_new_sized(0, length);
 
-  lua_getfield(L, config, "steps");
-  if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, steps undefined\n"); return; }
-  prefs->steps = lua_tointeger(L, -1); lua_pop(L, 1);
-  printf("  steps:   %d\n", prefs->steps);
+  fftw_plan p = fftw_plan_dft_1d(length, c->data, ck->data, FFTW_FORWARD, FFTW_ESTIMATE);
 
-  lua_getfield(L, config, "vstep");
-  if (!lua_isnil(L, -1)) {
-    prefs->vstep = lua_tointeger(L, -1);
-  } else {
-    prefs->vstep = -1;
-  }
-  lua_pop(L, 1);
-  lua_getfield(L, config, "vframes");
-  if (!lua_isnil(L, -1)) {
-    prefs->vframes = lua_tointeger(L, -1);
-  } else {
-    prefs->vframes = -1;
-  }
-  lua_pop(L, 1);
-  if (prefs->vstep > 0 && prefs->vframes > 0) {
-    printf("  will render video with:\n");
-    printf("    vstep:       %d\n", prefs->vstep);
-    printf("    vframes:     %d\n", prefs->vframes);
-  }
+  fftw_complex * psi = sop->psi;
+  fftw_complex * apsi = sop->apsi;
 
-  lua_getfield(L, config, "runs");
-  if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, runs undefined\n"); return; }
-  prefs->runs = lua_tointeger(L, -1); lua_pop(L, 1);
-  printf("  runs:    %d\n", prefs->runs);
+  splitop_save(sop);
 
-  array_t * xpos = array_equipart(prefs->range.min, prefs->range.max, prefs->bins);
-  prefs->xpos = xpos;
+  c = carray_append(c, cvect_skp(bins, psi, apsi));
 
-  {
-    lua_getfield(L, config, "potential");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, potential undefined\n"); return; }
-    int potential = lua_gettop(L);
+  printf("  starting run\n");
 
-    array_t * V = array_new(xpos->length);
-
-    for (int k = 0; k < xpos->length; k++) {
-      lua_pushvalue(L, potential);
-      lua_pushnumber(L, xpos->data[k]);
-      lua_call(L, 1, 1);
-      assert(lua_isnumber(L, -1));
-      V->data[k] = lua_tonumber(L, -1);
-      lua_pop(L, 1);
-      //printf("potential(%g) = %g\n", xpos->data[k], V->data[k]);
+  for (int k = 0; k < runs; k++) {
+    splitop_run(sop, steps);
+    if (k % 100 == 0) {
+      printf("    %d/%d\r", k, runs);
+      fflush(stdout);
     }
-    lua_pop(L, 1);
-    prefs->potential = V;
+    c = carray_append(c, cvect_skp(bins, psi, apsi));
   }
-  printf("  potential(x)\n");
+
+  printf("  done...                 \n");
+
+  fftw_execute_dft(p, c->data, ck->data);
+  printf("  calculated dft\n");
+
+  double nor = 1/sqrt(length);
+  for (int k = 0; k < length; k++) { ck->data[k] *= nor; }
+
+  fftw_destroy_plan(p);
+  splitop_free(sop);
+
+  res->c = c;
+  res->ck = ck;
+
+  printf("  cleaned up\n");
+
+  fftw_cleanup_threads();
+  return 0;
+}
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+
+
+int dump_results(preferences_t * prefs) {
+  int steps = prefs->steps;
+  double dt = prefs->dt;
+  double dE = prefs->dE;
+  results_t * res = prefs->results;
+  carray_t * c = res->c;
+  carray_t * ck = res->ck;
+
+  struct stat sb;
+
+  if (stat(prefs->output.dir, &sb)) {
+    if (mkdir(prefs->output.dir, 0777)) {
+      assert(0);
+    }
+  }
 
   {
-    lua_getfield(L, config, "psi");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, psi undefined\n"); return; }
-    int psi = lua_gettop(L);
-
-    carray_t * F = carray_new(xpos->length);
-
-    for (int k = 0; k < xpos->length; k++) {
-      lua_pushvalue(L, psi);
-      lua_pushnumber(L, xpos->data[k]);
-      lua_call(L, 1, 1);
-      assert(lua_istable(L, -1));
-      int tab = lua_gettop(L);
-      lua_rawgeti(L, tab, 1);
-      double x = lua_tonumber(L, -1);
-      lua_pop(L, 1);
-      lua_rawgeti(L, tab, 2);
-      double y = lua_tonumber(L, -1);
-      lua_pop(L, 2);
-      F->data[k] = x + I * y;
-      //printf("psi(%g) = %g + i %g\n", xpos->data[k], x, y);
+    int len = strlen(prefs->output.dir) + strlen(prefs->output.corr) + 10;
+    char path[len];
+    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.corr);
+    FILE * fp = fopen(path, "w"); assert(fp);
+    for (int k = 0; k < c->length; k++) {
+      complex double z = c->data[k];
+      fprintf(fp, "%.17e %.17e %.17e %.17e\n", k * steps * dt, creal(z), cimag(z), cabs(z));
     }
-    lua_pop(L, 1);
-    prefs->psi = F;
+    fclose(fp);
   }
-  printf("  psi(x)\n");
 
-  printf("  derrived values are:\n");
-  prefs->tsteps =  prefs->steps * prefs->runs;
-  printf("    tsteps:      %d\n", prefs->tsteps);
+  {
+    int len = strlen(prefs->output.dir) + strlen(prefs->output.dftcorr) + 10;
+    char path[len];
+    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.dftcorr);
+    FILE * fp = fopen(path, "w"); assert(fp);
+    for (int k = 0; k < ck->length; k++) {
+      complex double z = ck->data[k];
+      fprintf(fp, "%.17e %.17e %.17e %.17e\n", k * dE, creal(z), cimag(z), cabs(z));
+    }
+    fclose(fp);
+  }
 
-  prefs->dx = prefs->xpos->data[1] - prefs->xpos->data[0];
-  printf("    dx:          %g\n", prefs->dx);
-
-  prefs->dE = 2 * M_PI / (prefs->dt * prefs->tsteps);
-  printf("    dE:          %g\n", prefs->dE);
-
+  return 0;
 }
 
 int main(int argc, char * argv[argc]) {
@@ -506,10 +473,10 @@ int main(int argc, char * argv[argc]) {
     return -1;
   }
 
-  preferences_t prefs = {0};
-
   lua_State * L = luaL_newstate();
   luaL_openlibs(L);
+
+  preferences_t * prefs = preferences_new();
 
   if (luaL_dofile(L, argv[1])) {
     fprintf(stderr, "could not load '%s' : %s\n", argv[1], lua_tostring(L, 1));
@@ -518,10 +485,16 @@ int main(int argc, char * argv[argc]) {
     if (lua_isnil(L, -1)) {
       fprintf(stderr, "table config undefined\n");
     } else {
-      prefs.config = luaL_ref(L, LUA_REGISTRYINDEX);
-      prepare_simulation(L, &prefs);
+      prefs->config = luaL_ref(L, LUA_REGISTRYINDEX);
+      if (!preferences_read(L, prefs)) {
+        if (!start_simulation(prefs)) {
+          dump_results(prefs);
+        }
+      }
     }
   }
+
+  preferences_free(prefs);
 
   lua_close(L);
 

@@ -52,6 +52,7 @@ string (REPLACE ";" " " CFLAGS "${CFLAGS_LIST}")
 string (REPLACE ";" " " LFLAGS "${LFLAGS_LIST}")
 
 add_executable(projekt3
+  ${projekt_SOURCE_DIR}/simulation.c
   ${projekt_SOURCE_DIR}/projekt.c
   ${projekt_SOURCE_DIR}/splitop.c
   ${projekt_SOURCE_DIR}/carray.c
