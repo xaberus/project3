@@ -33,4 +33,9 @@ void splitop_restore(splitop_t * w);
 void splitop_prepare(splitop_t * w);
 void splitop_run(splitop_t * w, int times);
 
+#ifdef USE_CAIRO
+#include <cairo.h>
+void splitop_draw(splitop_t * w, cairo_t * cr, cairo_rectangle_t rect, fftw_complex * psi);
+#endif
+
 #endif /* _SPLITOP_H_ */

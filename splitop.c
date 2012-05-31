@@ -110,7 +110,6 @@ void splitop_prepare(splitop_t * w) {
   for (int n = 0; n < bins; n++) {
     psi[n] *= 1/sqrt(A);
   }
-  return psi;
 }
 
 void splitop_save(splitop_t * w) {
@@ -130,3 +129,94 @@ void splitop_restore(splitop_t * w) {
     psi[n] = apsi[n];
   }
 }
+
+#ifdef USE_CAIRO
+void splitop_draw(splitop_t * w, cairo_t * cr, cairo_rectangle_t rect, fftw_complex * psi) {
+  cairo_save(cr);
+  cairo_rectangle(cr, rect.x, rect.y, rect.width, rect.height);
+  cairo_clip(cr);
+
+  cairo_set_source_rgb(cr, 1, 1, 1);
+  cairo_set_line_width(cr, 2);
+  cairo_paint(cr);
+
+  double y0 = rect.height/2;
+
+  //cairo_set_line_width(cr, 10);
+  cairo_set_source_rgb(cr, 0, 0, 0);
+  cairo_move_to(cr, rect.x, rect.y + y0);
+  cairo_line_to(cr, rect.x + rect.width, rect.y + y0);
+  cairo_stroke(cr);
+
+  int bins = w->prefs->bins;
+
+  double xscale = rect.width/bins, yscale, max;
+
+  double * V = w->prefs->potential->data;
+
+  max = 0;
+  for (int n = 0; n < bins; n++) {
+    double a = fabs(V[n]); if (max < a) { max = a; }
+  }
+  yscale = y0/max;
+
+  cairo_set_source_rgb(cr, 0, 0, 0);
+  cairo_move_to(cr, rect.x, y0);
+  for (int n = 0; n < bins; n++) { cairo_line_to(cr, rect.x + n * xscale, rect.y + y0 - V[n] * yscale); }
+  cairo_stroke(cr);
+
+  fftw_complex * apsi = w->apsi;
+  max = 0;
+  for (int n = 0; n < bins; n++) {
+    double a = cabs(apsi[n]); if (max < a) { max = a; }
+  }
+  yscale = y0/(5*max/4);
+
+  cairo_set_line_width(cr, 1);
+  cairo_set_source_rgb(cr, 0, 0, 1);
+  cairo_move_to(cr, rect.x, y0);
+  for (int n = 0; n < bins; n++) { cairo_line_to(cr, rect.x + n * xscale, rect.y + y0 - cabs(apsi[n]) * yscale); }
+  cairo_stroke(cr);
+
+  cairo_set_line_width(cr, 2);
+  cairo_set_source_rgb(cr, 1, 0, 0);
+  cairo_move_to(cr, rect.x, y0);
+  for (int n = 0; n < bins; n++) { cairo_line_to(cr, rect.x + n * xscale, rect.y + y0 - cabs(psi[n]) * yscale); }
+  cairo_stroke(cr);
+
+  fftw_complex * psik = fftw_alloc_complex(bins); assert(psik);
+  fftw_execute_dft(w->fwd, psi, psik);
+
+  max = 0;
+  for (int n = 0; n < bins; n++) {
+    double a = cabs(psik[n]); if (max < a) { max = a; }
+  }
+  yscale = y0/(5*max/4);
+
+  cairo_set_line_width(cr, 1);
+  cairo_set_source_rgb(cr, 1, .5, 0);
+  /*cairo_move_to(cr, rect.x, y0);
+  for (int n = 0; n < bins; n++) {
+    int l = (n+bins/2)%w->bins;
+    cairo_line_to(cr, rect.x + (n-bins/3)*4 * xscale, rect.y + 2*y0 - cabs(psik[l]) * yscale);
+  }*/
+  cairo_move_to(cr, rect.x, y0);
+  int dron = 1;
+  double reg = 1.0 / bins;
+  for (int k = bins/2; k < bins; k++) {
+    double x = rect.x + rect.width/2 + (k-bins) * reg * rect.width;
+    double y = rect.y + 2*y0 - cabs(psik[k]) * yscale;
+    if (dron) { cairo_move_to(cr, x, y); dron = 0; } else { cairo_line_to(cr, x, y); }
+  }
+  for (int k = 0; k < bins/2; k++) {
+    double x = rect.x + rect.width/2 + k * reg * rect.width;
+    double y = rect.y + 2*y0 - cabs(psik[k]) * yscale;
+    cairo_line_to(cr, x, y);
+  }
+  cairo_stroke(cr);
+
+  fftw_free(psik);
+
+  cairo_restore(cr);
+}
+#endif

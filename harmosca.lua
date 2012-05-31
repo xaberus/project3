@@ -9,8 +9,7 @@ config = {
   dt = 0.0001;
   range = {-25,25};
   steps = 10;
-  --runs = 10000;
-  runs = 10000;
+  runs = 50000;
   --
   vstep = 100;
   vframes = 200;
@@ -29,11 +28,13 @@ config = {
   energy = function(k)
     return A * (.5 + k)
   end;
+  enrgrange = {0, 255};
   output = {
     dir = "./harmosca";
     apsi = "apsi.dat";
     pot = "pot.dat";
     corr = "corr.dat";
     dftcorr = "dftcorr.dat";
+    theoenrg = "theoenrg.dat";
   };
 }

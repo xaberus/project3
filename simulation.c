@@ -1,10 +1,24 @@
-#include <lauxlib.h>
-#include <lualib.h>
-
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <math.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+
+#include <lauxlib.h>
+#include <lualib.h>
+
+#ifdef USE_CAIRO
+# include <cairo.h>
+#endif
+
+#include "splitop.h"
+#include "cvect.h"
+#include "array.h"
+#include "carray.h"
 
 #include "simulation.h"
 
@@ -29,6 +43,7 @@ preferences_t * preferences_new() {
 void preferences_free(preferences_t * prefs) {
   free(prefs->xpos);
   free(prefs->potential);
+  free(prefs->theoenrg);
   free(prefs->psi);
 
   free(prefs->output.dir);
@@ -36,6 +51,7 @@ void preferences_free(preferences_t * prefs) {
   free(prefs->output.pot);
   free(prefs->output.corr);
   free(prefs->output.dftcorr);
+  free(prefs->output.theoenrg);
 
   if (prefs->results) {
     results_free(prefs->results);
@@ -80,6 +96,7 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
   prefs->steps = lua_tointeger(L, -1); lua_pop(L, 1);
   printf("  steps:   %d\n", prefs->steps);
 
+#ifdef USE_CAIRO
   lua_getfield(L, config, "vstep");
   if (!lua_isnil(L, -1)) {
     prefs->vstep = lua_tointeger(L, -1);
@@ -99,6 +116,7 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
     printf("    vstep:       %d\n", prefs->vstep);
     printf("    vframes:     %d\n", prefs->vframes);
   }
+#endif
 
   lua_getfield(L, config, "runs");
   if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, runs undefined\n"); return -1; }
@@ -173,8 +191,11 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
     if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.corr undefined\n"); return -1; }
     prefs->output.corr = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
     lua_getfield(L, tab, "dftcorr");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.corr undefined\n"); return -1; }
+    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.dftcorr undefined\n"); return -1; }
     prefs->output.dftcorr = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
+    lua_getfield(L, tab, "theoenrg");
+    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.theoenrg undefined\n"); return -1; }
+    prefs->output.theoenrg = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
     lua_pop(L, 1);
   }
   printf("  output:\n");
@@ -183,6 +204,7 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
   printf("    pot:         %s/%s\n", prefs->output.dir, prefs->output.pot);
   printf("    corr:        %s/%s\n", prefs->output.dir, prefs->output.corr);
   printf("    dftcorr:     %s/%s\n", prefs->output.dir, prefs->output.dftcorr);
+  printf("    theoenrg:    %s/%s\n", prefs->output.dir, prefs->output.theoenrg);
 
   printf("  derrived values are:\n");
   prefs->tsteps =  prefs->steps * prefs->runs;
@@ -197,10 +219,293 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
   prefs->dE = 2 * M_PI / (prefs->dt * prefs->tsteps);
   printf("    dE:          %g\n", prefs->dE);
 
+  {
+    lua_getfield(L, config, "energy");
+    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, energy undefined\n"); return -1; }
+    int energy = lua_gettop(L);
+
+    array_t * E = array_new_sized(0, 100);
+    double maxE = prefs->dE * prefs->runs, ek;
+    int k = 0;
+
+    printf("  maximal energy detectable is %g\n", maxE);
+
+    do {
+      lua_pushvalue(L, energy);
+      lua_pushnumber(L, k++);
+      lua_call(L, 1, 1);
+      assert(lua_isnumber(L, -1));
+      ek = lua_tonumber(L, -1);
+      lua_pop(L, 1);
+      array_append(E, ek);
+    } while (ek < maxE);
+    lua_pop(L, 1);
+    prefs->theoenrg = E;
+  }
+  printf("    theoenrg(k)\n");
+
+  {
+    lua_getfield(L, config, "enrgrange");
+    if (!lua_isnil(L, -1)) {
+      int range = lua_gettop(L);
+      lua_rawgeti(L, range, 1);
+      if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, enrgrange.min undefined\n"); return -1; }
+      prefs->enrgrange.min = lua_tonumber(L, -1); lua_pop(L, 1);
+      lua_rawgeti(L, range, 2);
+      if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, enrgrange.max undefined\n"); return -1; }
+      prefs->enrgrange.max = lua_tonumber(L, -1); lua_pop(L, 1);
+    }
+    lua_pop(L, 1);
+  }
+  printf("  enrgrange [%g;%g]\n", prefs->enrgrange.min, prefs->enrgrange.max);
+
   printf("\n");
 
   luaL_unref(L, LUA_REGISTRYINDEX, prefs->config);
   prefs->config = LUA_NOREF;
+
+  return 0;
+}
+
+int start_simulation(preferences_t * prefs) {
+  printf("starting simulation: \n");
+
+  splitop_t * sop = splitop_new(prefs);
+
+  splitop_prepare(sop);
+
+  /* sync */
+  fftw_complex * psi = sop->psi;
+  carray_t * spsi = prefs->psi;
+  for (int k = 0; k < spsi->length; k++) {
+    spsi->data[k] = psi[k];
+  }
+
+  splitop_save(sop);
+  fftw_complex * apsi = sop->apsi;
+
+  printf("  split operator created\n");
+
+  results_t * res = results_new(); prefs->results = res;
+
+  int bins = prefs->bins;
+  int runs = prefs->runs;
+  int steps= prefs->steps;
+  int length = runs + 1;
+
+  carray_t * c = carray_new_sized(0, length);
+  carray_t * ck = carray_new_sized(0, length);
+
+  fftw_plan p = fftw_plan_dft_1d(length, c->data, ck->data, FFTW_FORWARD, FFTW_ESTIMATE);
+
+#ifdef USE_CAIRO
+  if (prefs->vstep > 0 && prefs->vframes > 0) {
+    struct stat sb;
+    int len = strlen(prefs->output.dir) + 100;
+    int width = 1000, height = 400;
+    char path[len];
+
+    if (stat(prefs->output.dir, &sb)) {
+      if (mkdir(prefs->output.dir, 0777)) {
+        assert(0);
+      }
+    }
+
+    snprintf(path, len, "%s/video", prefs->output.dir);
+    if (stat(path, &sb)) {
+      if (mkdir(path, 0777)) {
+        assert(0);
+      }
+    }
+
+    cairo_surface_t * surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+    cairo_t *cr = cairo_create(surface);
+    for (int k = 0; k < prefs->vframes ; k++) {
+      fprintf(stderr, "  video (%g), frame %u\r", cvect_normsq(bins, psi), k);
+      splitop_run(sop, prefs->vstep);
+      splitop_draw(sop, cr, (cairo_rectangle_t){0, 0, width, height}, psi);
+      snprintf(path, len, "%s/video/image%05u.png", prefs->output.dir, k);
+      cairo_surface_write_to_png(surface, path);
+    }
+    cairo_destroy(cr);
+    cairo_surface_destroy(surface);
+    printf("  done...                 \n");
+  }
+  splitop_restore(sop);
+#endif
+
+  c = carray_append(c, cvect_skp(bins, psi, apsi));
+
+  printf("  starting run\n");
+
+  for (int k = 0; k < runs; k++) {
+    splitop_run(sop, steps);
+    if (k % 100 == 0) {
+      printf("    %d/%d\r", k, runs);
+      fflush(stdout);
+    }
+    c = carray_append(c, cvect_skp(bins, psi, apsi));
+  }
+
+  printf("  done...                 \n");
+
+  printf("  hanning before dft\n");
+  // Hann Fenster:
+  double hannfkt = 2 * M_PI/(length);
+  for (int k = 0; k < length; k++) { c->data[k] *= .5 * (1 - cos(hannfkt * k)); }
+
+  fftw_execute_dft(p, c->data, ck->data);
+  printf("  calculated dft\n");
+
+  double nor = 1/sqrt(length);
+  for (int k = 0; k < length; k++) { ck->data[k] *= nor; }
+
+  fftw_destroy_plan(p);
+  splitop_free(sop);
+
+  res->c = c;
+  res->ck = ck;
+  ck->length = c->length;
+
+  printf("  cleaned up\n");
+
+  return 0;
+}
+
+int dump_results(preferences_t * prefs) {
+  int steps = prefs->steps;
+  double dt = prefs->dt;
+  double dE = prefs->dE;
+  results_t * res = prefs->results;
+  carray_t * c = res->c;
+  carray_t * ck = res->ck;
+
+  array_t * xpos = prefs->xpos;
+  carray_t * apsi = prefs->psi;
+  array_t * pot = prefs->potential;
+
+  struct stat sb;
+
+  if (stat(prefs->output.dir, &sb)) {
+    if (mkdir(prefs->output.dir, 0777)) {
+      assert(0);
+    }
+  }
+
+  {
+    int len = strlen(prefs->output.dir) + strlen(prefs->output.apsi) + 10;
+    char path[len];
+    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.apsi);
+    FILE * fp = fopen(path, "w"); assert(fp);
+    for (int k = 0; k < apsi->length; k++) {
+      complex double z = apsi->data[k];
+      fprintf(fp, "%.17e %.17e %.17e %.17e\n", xpos->data[k], creal(z), cimag(z), cabs(z));
+    }
+    fclose(fp);
+  }
+
+  {
+    int len = strlen(prefs->output.dir) + strlen(prefs->output.pot) + 10;
+    char path[len];
+    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.pot);
+    FILE * fp = fopen(path, "w"); assert(fp);
+    for (int k = 0; k < apsi->length; k++) {
+      fprintf(fp, "%.17e %.17e\n", xpos->data[k], pot->data[k]);
+    }
+    fclose(fp);
+  }
+
+  {
+    int len = strlen(prefs->output.dir) + strlen(prefs->output.corr) + 10;
+    char path[len];
+    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.corr);
+    FILE * fp = fopen(path, "w"); assert(fp);
+    for (int k = 0; k < c->length; k++) {
+      complex double z = c->data[k];
+      fprintf(fp, "%.17e %.17e %.17e %.17e\n", k * steps * dt, creal(z), cimag(z), cabs(z));
+    }
+    fclose(fp);
+  }
+
+  {
+    int len = strlen(prefs->output.dir) + strlen(prefs->output.dftcorr) + 10;
+    char path[len];
+    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.dftcorr);
+    FILE * fp = fopen(path, "w"); assert(fp);
+    for (int k = 0; k < ck->length; k++) {
+      complex double z = ck->data[k];
+      fprintf(fp, "%.17e %.17e %.17e %.17e\n", k * dE, creal(z), cimag(z), cabs(z));
+    }
+    fclose(fp);
+  }
+
+  {
+    int len = strlen(prefs->output.dir) + strlen(prefs->output.theoenrg) + 10;
+    char path[len];
+    array_t * E = prefs->theoenrg;
+    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.theoenrg);
+    FILE * fp = fopen(path, "w"); assert(fp);
+    for (int k = 0; k < E->length; k++) {
+      fprintf(fp, "%d %.17e\n", k, E->data[k]);
+    }
+    fclose(fp);
+  }
+
+  {
+    int len = strlen(prefs->output.dir) + strlen("stats") + 10;
+    char path[len];
+    snprintf(path, len, "%s/%s", prefs->output.dir, "stats");
+    FILE * fp = fopen(path, "w"); assert(fp);
+
+    fprintf(fp, "%d:", prefs->bins);
+    fprintf(fp, "%.17e:", prefs->dt);
+    fprintf(fp, "%.17e:", prefs->range.min);
+    fprintf(fp, "%.17e:", prefs->range.max);
+    fprintf(fp, "%d:", prefs->steps);
+    fprintf(fp, "%d:", prefs->runs);
+
+    {
+      array_t * V = prefs->potential;
+      double min = 0, max=0;
+      for (int k = 0; k < V->length; k++) {
+        double z = V->data[k];
+        if (z < min) {
+          min = z;
+        }
+        if (z > max) {
+          max = z;
+        }
+      }
+      fprintf(fp, "%.17e:", min);
+      fprintf(fp, "%.17e:", max);
+    }
+
+    {
+      carray_t * psi = prefs->psi;
+      double min = 0, max=0;
+      for (int k = 0; k < psi->length; k++) {
+        double z = cabs(psi->data[k]);
+        if (z < min) {
+          min = z;
+        }
+        if (z > max) {
+          max = z;
+        }
+      }
+      fprintf(fp, "%.17e:", min);
+      fprintf(fp, "%.17e:", max);
+    }
+
+    fprintf(fp, "%d:", prefs->tsteps);
+    fprintf(fp, "%.17e:", prefs->dx);
+    fprintf(fp, "%.17e:", prefs->dk);
+    fprintf(fp, "%.17e:", prefs->dE);
+
+    fprintf(fp, "%.17e:", prefs->enrgrange.min);
+    fprintf(fp, "%.17e:", prefs->enrgrange.max);
+
+    fclose(fp);
+  }
 
   return 0;
 }

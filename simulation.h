@@ -35,6 +35,7 @@ typedef struct {
     char * pot;
     char * corr;
     char * dftcorr;
+    char * theoenrg;
   } output;
 
   int        tsteps;
@@ -42,11 +43,20 @@ typedef struct {
   double     dk;
   double     dE;
 
+  struct {
+    double min;
+    double max;
+  } enrgrange;
+
+  array_t  * theoenrg;
+
   results_t * results;
 } preferences_t;
 
 void preferences_free(preferences_t * prefs);
 preferences_t * preferences_new();
 int preferences_read(lua_State * L, preferences_t * prefs);
+int start_simulation(preferences_t * prefs);
+int dump_results(preferences_t * prefs);
 
 #endif /* _SIMULATION_H_ */
