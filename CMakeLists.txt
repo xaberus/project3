@@ -8,8 +8,7 @@ include(FindPkgConfig)
 
 #include_directories()
 
-#pkg_check_modules(PKG REQUIRED "cairo" "fftw3")
-pkg_check_modules(PKG REQUIRED "fftw3" "lua")
+pkg_check_modules(PKG REQUIRED "cairo" "fftw3" "lua")
 
 set(CFLAGS_LIST
   "-std=gnu99"

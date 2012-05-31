@@ -29,6 +29,7 @@ splitop_t * splitop_new(preferences_t * prefs);
 void splitop_free(splitop_t * w);
 
 void splitop_save(splitop_t * w);
+void splitop_restore(splitop_t * w);
 void splitop_prepare(splitop_t * w);
 void splitop_run(splitop_t * w, int times);
 

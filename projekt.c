@@ -4,10 +4,16 @@
 #include <complex.h>
 #include <fftw3.h>
 
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+
 #include <assert.h>
 #include <stdint.h>
 
-//#include <cairo.h>
+#include <cairo.h>
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -22,7 +28,7 @@
 
 /*************************************************************************************************/
 
-#if 0
+#if 1
 void splitop_draw(splitop_t * w, cairo_t * cr, cairo_rectangle_t rect, fftw_complex * psi) {
   cairo_save(cr);
   cairo_rectangle(cr, rect.x, rect.y, rect.width, rect.height);
@@ -40,19 +46,21 @@ void splitop_draw(splitop_t * w, cairo_t * cr, cairo_rectangle_t rect, fftw_comp
   cairo_line_to(cr, rect.x + rect.width, rect.y + y0);
   cairo_stroke(cr);
 
-  int bins = w->bins;
+  int bins = w->prefs->bins;
 
   double xscale = rect.width/bins, yscale, max;
 
+  double * V = w->prefs->potential->data;
+
   max = 0;
   for (int n = 0; n < bins; n++) {
-    double a = fabs(w->V[n]); if (max < a) { max = a; }
+    double a = fabs(V[n]); if (max < a) { max = a; }
   }
   yscale = y0/max;
 
   cairo_set_source_rgb(cr, 0, 0, 0);
   cairo_move_to(cr, rect.x, y0);
-  for (int n = 0; n < bins; n++) { cairo_line_to(cr, rect.x + n * xscale, rect.y + y0 - w->V[n] * yscale); }
+  for (int n = 0; n < bins; n++) { cairo_line_to(cr, rect.x + n * xscale, rect.y + y0 - V[n] * yscale); }
   cairo_stroke(cr);
 
   fftw_complex * apsi = w->apsi;
@@ -358,13 +366,24 @@ int nomain(/*int argc, char *argv[]*/) {
 
 int start_simulation(preferences_t * prefs) {
   fftw_init_threads();
-  fftw_plan_with_nthreads(2);
+  fftw_plan_with_nthreads(4);
 
   printf("starting simulation: \n");
 
   splitop_t * sop = splitop_new(prefs);
 
   splitop_prepare(sop);
+
+  /* sync */
+  fftw_complex * psi = sop->psi;
+  carray_t * spsi = prefs->psi;
+  for (int k = 0; k < spsi->length; k++) {
+    spsi->data[k] = psi[k];
+  }
+
+  splitop_save(sop);
+  fftw_complex * apsi = sop->apsi;
+
   printf("  split operator ceated\n");
 
   results_t * res = results_new(); prefs->results = res;
@@ -379,10 +398,29 @@ int start_simulation(preferences_t * prefs) {
 
   fftw_plan p = fftw_plan_dft_1d(length, c->data, ck->data, FFTW_FORWARD, FFTW_ESTIMATE);
 
-  fftw_complex * psi = sop->psi;
-  fftw_complex * apsi = sop->apsi;
+  if (prefs->vstep > 0 && prefs->vframes > 0) {
+    int width = 1000, height = 400;
+    char buf[256];
+    cairo_surface_t * surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+    cairo_t *cr = cairo_create(surface);
+    for (int k = 0; k < prefs->vframes ; k++) {
+      fprintf(stderr, "  video (%g), frame %u\r", cvect_normsq(bins, psi), k);
+      splitop_run(sop, prefs->vstep);
+      splitop_draw(sop, cr, (cairo_rectangle_t){0, 0, width, height}, psi);
+      snprintf(buf, sizeof(buf), "image%05u.png", k);
+      {
+        int len = strlen(prefs->output.dir) + strlen(buf) + 10;
+        char path[len];
+        snprintf(path, len, "%s/%s", prefs->output.dir, buf);
+        cairo_surface_write_to_png(surface, path);
+      }
+    }
+    cairo_destroy(cr);
+    cairo_surface_destroy(surface);
+    printf("  done...                 \n");
+  }
 
-  splitop_save(sop);
+  splitop_restore(sop);
 
   c = carray_append(c, cvect_skp(bins, psi, apsi));
 
@@ -399,6 +437,11 @@ int start_simulation(preferences_t * prefs) {
 
   printf("  done...                 \n");
 
+  printf("  hanning before dft\n");
+  // Hann Fenster:
+  double hannfkt = 2 * M_PI/(length);
+  for (int k = 0; k < length; k++) { c->data[k] *= .5 * (1 - cos(hannfkt * k)); }
+
   fftw_execute_dft(p, c->data, ck->data);
   printf("  calculated dft\n");
 
@@ -410,18 +453,13 @@ int start_simulation(preferences_t * prefs) {
 
   res->c = c;
   res->ck = ck;
+  ck->length = c->length;
 
   printf("  cleaned up\n");
 
   fftw_cleanup_threads();
   return 0;
 }
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <string.h>
-
 
 int dump_results(preferences_t * prefs) {
   int steps = prefs->steps;
@@ -431,12 +469,39 @@ int dump_results(preferences_t * prefs) {
   carray_t * c = res->c;
   carray_t * ck = res->ck;
 
+  array_t * xpos = prefs->xpos;
+  carray_t * apsi = prefs->psi;
+  array_t * pot = prefs->potential;
+
   struct stat sb;
 
   if (stat(prefs->output.dir, &sb)) {
     if (mkdir(prefs->output.dir, 0777)) {
       assert(0);
     }
+  }
+
+  {
+    int len = strlen(prefs->output.dir) + strlen(prefs->output.apsi) + 10;
+    char path[len];
+    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.apsi);
+    FILE * fp = fopen(path, "w"); assert(fp);
+    for (int k = 0; k < apsi->length; k++) {
+      complex double z = apsi->data[k];
+      fprintf(fp, "%.17e %.17e %.17e %.17e\n", xpos->data[k], creal(z), cimag(z), cabs(z));
+    }
+    fclose(fp);
+  }
+
+  {
+    int len = strlen(prefs->output.dir) + strlen(prefs->output.pot) + 10;
+    char path[len];
+    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.pot);
+    FILE * fp = fopen(path, "w"); assert(fp);
+    for (int k = 0; k < apsi->length; k++) {
+      fprintf(fp, "%.17e %.17e\n", xpos->data[k], pot->data[k]);
+    }
+    fclose(fp);
   }
 
   {

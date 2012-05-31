@@ -2,7 +2,7 @@ local math = require("math")
 local complex = require("complex")
 
 local omega = 40;
-local A = math.sqrt(4 * omega)
+local L = 10
 
 config = {
   bins = 4096*2;
@@ -10,27 +10,22 @@ config = {
   range = {-25,25};
   steps = 10;
   --runs = 10000;
-  runs = 10000;
+  runs = 50000;
   --
-  vstep = 100;
-  vframes = 200;
+  --vstep = 100;
+  --vframes = 200;
   --
   potential = function(x)
-    return omega * x ^ 2;
+    if math.abs(x) < L/2 then return 0 else return 10000 end
   end;
   psi = function(x)
-    local a = .5
-    local aa = a * a
-    local x0 = 0
-    local k0 = 10
-    local xx = (x-x0) * (x-x0)
-    return  math.exp(-xx/(aa)) * complex.exp({0, k0*(x)})
+    return  math.exp(-x^2/(2)) * complex.exp({0, 4 * x})
   end;
   energy = function(k)
     return A * (.5 + k)
   end;
   output = {
-    dir = "./harmosca";
+    dir = "./square";
     apsi = "apsi.dat";
     pot = "pot.dat";
     corr = "corr.dat";

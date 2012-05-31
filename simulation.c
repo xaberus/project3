@@ -32,6 +32,8 @@ void preferences_free(preferences_t * prefs) {
   free(prefs->psi);
 
   free(prefs->output.dir);
+  free(prefs->output.apsi);
+  free(prefs->output.pot);
   free(prefs->output.corr);
   free(prefs->output.dftcorr);
 
@@ -161,6 +163,12 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
     lua_getfield(L, tab, "dir");
     if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.dir undefined\n"); return -1; }
     prefs->output.dir = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
+    lua_getfield(L, tab, "apsi");
+    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.apsi undefined\n"); return -1; }
+    prefs->output.apsi = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
+    lua_getfield(L, tab, "pot");
+    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.pot undefined\n"); return -1; }
+    prefs->output.pot = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
     lua_getfield(L, tab, "corr");
     if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.corr undefined\n"); return -1; }
     prefs->output.corr = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
@@ -171,6 +179,8 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
   }
   printf("  output:\n");
   printf("    dir:         %s\n", prefs->output.dir);
+  printf("    apsi:        %s/%s\n", prefs->output.dir, prefs->output.apsi);
+  printf("    pot:         %s/%s\n", prefs->output.dir, prefs->output.pot);
   printf("    corr:        %s/%s\n", prefs->output.dir, prefs->output.corr);
   printf("    dftcorr:     %s/%s\n", prefs->output.dir, prefs->output.dftcorr);
 
@@ -181,7 +191,7 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
   prefs->dx = prefs->xpos->data[1] - prefs->xpos->data[0];
   printf("    dx:          %g\n", prefs->dx);
 
-  prefs->dk = 2 * M_PI / prefs->bins;
+  prefs->dk = 2 * M_PI / (prefs->range.max - prefs->range.min);
   printf("    dk:          %g\n", prefs->dk);
 
   prefs->dE = 2 * M_PI / (prefs->dt * prefs->tsteps);

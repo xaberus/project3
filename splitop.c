@@ -18,13 +18,17 @@ splitop_t * splitop_new(preferences_t * prefs) {
   w->eVn = fftw_alloc_complex(bins); assert(w->eVn);
   w->ehV = fftw_alloc_complex(bins); assert(w->ehV);
   w->ehVn = fftw_alloc_complex(bins); assert(w->ehVn);
+  w->eT = fftw_alloc_complex(bins); assert(w->eT);
+  w->apsi = fftw_alloc_complex(bins); assert(w->apsi);
+  w->psi = fftw_alloc_complex(bins); assert(w->psi);
+  w->psik = fftw_alloc_complex(bins); assert(w->psik);
+
   for (int n = 0; n < bins; n++) {
     w->eV[n] = cexp(-I * V[n] * dt);
     w->eVn[n] = w->eV[n] / bins;
     w->ehV[n] = cexp(-I * V[n] * dt / 2);
     w->ehVn[n] = w->ehV[n] / bins;
   }
-  w->eT = fftw_alloc_complex(bins); assert(w->eT);
   for (int n = 0; n < bins; n++) {
     if (n < bins/2) {
       w->eT[n] = cexp(-I * dk * dk * n * n * dt);
@@ -34,10 +38,9 @@ splitop_t * splitop_new(preferences_t * prefs) {
     }
   }
 
-  w->apsi = fftw_alloc_complex(bins); assert(w->apsi);
-  w->psi = fftw_alloc_complex(bins); assert(w->psi);
-  w->psik = fftw_alloc_complex(bins); assert(w->psik);
 
+  /*w->fwd = fftw_plan_dft_1d(bins, NULL, NULL, FFTW_FORWARD, FFTW_ESTIMATE);
+  w->bwd = fftw_plan_dft_1d(bins, NULL, NULL, FFTW_BACKWARD, FFTW_ESTIMATE);*/
   w->fwd = fftw_plan_dft_1d(bins, w->psi, w->psik, FFTW_FORWARD, FFTW_MEASURE);
   w->bwd = fftw_plan_dft_1d(bins, w->psik, w->psi, FFTW_BACKWARD, FFTW_MEASURE);
 
@@ -72,7 +75,8 @@ void splitop_run(splitop_t * w, int times) {
   fftw_complex * psi = w->psi;
   fftw_complex * psik = w->psik;
 
-  /*for (int k = 0; k < times; k++) {
+  /*fftw_complex * p, * as, * ae;
+  for (int k = 0; k < times; k++) {
     //for (int n = 0; n < bins; n++) { psi[n] *= ehV[n]; }
     for (p = psi, as = ehV, ae = as + bins; as < ae; as++, p++) { (*p) *= *as; }
     fftw_execute_dft(w->fwd, psi, psik);
@@ -115,5 +119,14 @@ void splitop_save(splitop_t * w) {
   fftw_complex * apsi = w->apsi;
   for (int n = 0; n < bins; n++) {
     apsi[n] = psi[n];
+  }
+}
+
+void splitop_restore(splitop_t * w) {
+  int bins = w->prefs->bins;
+  fftw_complex * psi = w->psi;
+  fftw_complex * apsi = w->apsi;
+  for (int n = 0; n < bins; n++) {
+    psi[n] = apsi[n];
   }
 }

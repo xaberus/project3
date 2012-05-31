@@ -31,6 +31,8 @@ typedef struct {
 
   struct {
     char * dir;
+    char * apsi;
+    char * pot;
     char * corr;
     char * dftcorr;
   } output;
