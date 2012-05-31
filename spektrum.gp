@@ -30,6 +30,6 @@ set xlabel "Energie"
 set xrange [Emin : Emax]
 
 plot \
-  "dftcorr.dat" using 1:4 with lines title "F[<psi|U(t)|psi>](E)", \
+  "dftcorr.dat" using 1:4 with lines title "|F[<psi|U(t)|psi>](E)|", \
   "theoenrg.dat" using 2:(-1) with impulses title "theoretische Energien";
 

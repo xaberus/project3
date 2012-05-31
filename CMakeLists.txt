@@ -5,6 +5,7 @@ find_program(FFMPEG ffmpeg)
 find_program(GNUPLOT gnuplot)
 
 set(PRESETS
+  "simple"
   "square"
   "harmosca"
 )
@@ -14,7 +15,7 @@ set(PRESETS
 #include_directories()
 
 pkg_check_modules(PKG REQUIRED "fftw3" "lua")
-#pkg_check_modules(CAIRO REQUIRED "cairo")
+pkg_check_modules(CAIRO REQUIRED "cairo")
 
 set(CFLAGS_LIST
   "-std=gnu99"

@@ -30,7 +30,7 @@ set yrange [Vmin: Vmax]
 set y2range [apsimin: apsimax]
 
 set ylabel "Potential"
-set y2label "|psi|²"
+set y2label "|psi|"
 
 set ytics nomirror
 set y2tics
