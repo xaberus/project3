@@ -399,6 +399,13 @@ int start_simulation(preferences_t * prefs) {
   fftw_plan p = fftw_plan_dft_1d(length, c->data, ck->data, FFTW_FORWARD, FFTW_ESTIMATE);
 
   if (prefs->vstep > 0 && prefs->vframes > 0) {
+    struct stat sb;
+
+    if (stat(prefs->output.dir, &sb)) {
+      if (mkdir(prefs->output.dir, 0777)) {
+        assert(0);
+      }
+    }
     int width = 1000, height = 400;
     char buf[256];
     cairo_surface_t * surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
