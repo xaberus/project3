@@ -6,9 +6,15 @@
 \usepackage[german]{babel}
 \usepackage{amsmath}
 \usepackage{amsfonts}
+\usepackage{amsthm}
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage{lmodern}
+
+\usepackage{trsym}
+\usepackage{dsfont}
+\usepackage{pifont}
+
 %\usepackage{kpfonts}
 %\usepackage{fourier}
 %\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
@@ -25,6 +31,9 @@
 % Time-dependent propagation of high energy laser beams through the atmosphere 
 % J. A. Fleck, J. R. Morris and M. D. Feit
 % http://dx.doi.org/10.1007/BF00896333
+
+% Continuous and Discrete Time Signals and Systems [Hardcover]
+% Mrinal Mandal, Amir Asif
 
 \title{Energiespektrum aus Autokorrelationsfunktion}
 \author{Pavel Sterin}
@@ -59,11 +68,256 @@
 		Falls sich das Potential für kleine Zetdiffrenzen $\tau$ nur geringfügig ändert oder
 		sogar stets konstant ist, sodass $[H(t),H(t+\tau)]\approx 0$ gilt, geht diese Lösung
 		in das Operator-Exponential über:
-		\begin{equation} \label{eq:expform}
+		\begin{equation*}
 			U(t,\tau)=\exp\left(-i \tau (T+V(t))\right)
+		\end{equation*}
+		Im weiteren beziehe ich mich stets auf eine einzige Iteration und lasse darum die
+		zetliche Abhängikeit von $V$ fallen:
+		\begin{equation}\label{eq:exp}
+			U(\tau)=\mathrm{e}^{-i \tau (T+V)}
 		\end{equation}
+		Da $T$ nur im Impulsraum und $V$ nur im Ortsraum wirken, wäre es günstig sie nur dort
+		auszuwerten, weil sie dann als Multiplikationsopretoren diagonal wären und
+		das Exponential sich leicht auswerten ließe. Da jedoch für die meisten interessanten 
+		Probleme $T$ und $V$ nicht Kommutieren, $[T,V]\neq 0$, muss man hier geschickt
+		Approxomieren. 
+		
+		Für jeden Operator gilt zunächst:
+		\begin{equation*}
+			\mathrm{e}^{- i \tau X}
+				= \sum_{n=0}^{\infty} \frac{(i \tau X)^n}{n!}
+				= 1 - i \tau X - \tau^2 \frac{X^2}{2} + O(\tau^3)
+		\end{equation*}
+		
+		Mit den Bezeichnung	$U_X(\tau)=\mathrm{e}^{-i \tau X}$ ergibt das dann:
+		\begin{align*}
+			U_{X+Y}(\tau) &= 1 - i \tau (X+Y) -\tau^2 \frac{(X+Y)^2}{2} + O(\tau^3)\\
+							&= 1 - i \tau X - i \tau Y\\ 
+							&\quad-\frac{\tau^2}{2} \left(	X^2 + X Y + Y X + Y^2 \right) + O(\tau^3)\\
+		\end{align*}
+		\begin{equation*}
+			U_X(\tau) = 1 - i \tau X -\tau^2 \frac{X^2}{2} + O(\tau^3)
+		\end{equation*}
+		\begin{equation*}
+			U_Y(\tau) = 1 - i \tau Y -\tau^2 \frac{Y^2}{2} + O(\tau^3)
+		\end{equation*}
+		\begin{multline*}
+			U_X(\tau) U_Y(\tau) = 
+				1
+				- i \tau Y - i \tau X\\
+				- \tau^2 X Y 
+				- \tau^2 \frac{Y^2}{2}
+				- \tau^2 \frac{X^2}{2}
+				+ O(\tau^3)
+		\end{multline*}
+		Damit erhält man den Ausdruck:
+		\begin{equation}\label{eq:expand}
+			U_{X+Y}(\tau) = U_X(\tau)U_Y(\tau) 
+				+ \frac{\tau^2}{2} \left[X,Y\right]	+ O(\tau^3)\\
+		\end{equation}
+		Mit $X=\frac{V}{2}$, $Y=T+\frac{V}{2}$ folgt:
+		\begin{multline}
+			U_{\frac{V}{2}+T+\frac{V}{2}}(\tau)
+				= U_{\frac{V}{2}}(\tau)U_{T+\frac{V}{2}}(\tau) \\
+					+ \left[\frac{V}{2},T+\frac{V}{2}\right]	+ O(\tau^3)\\
+				= U_{\frac{V}{2}}(\tau)U_{T+\frac{V}{2}}(\tau) 
+					+ \left[\frac{V}{2},T\right]	+ O(\tau^3)\\
+				= U_{\frac{V}{2}}(\tau)
+						\left(
+							U_T(\tau)U_{\frac{V}{2}}(\tau)
+								+ \frac{\tau^2}{2} \left[T,\frac{V}{2}\right]
+						\right)\\
+					+ \left[\frac{V}{2},T\right]	+ O(\tau^3)\\
+				= U_{\frac{V}{2}}(\tau) U_T(\tau) U_{\frac{V}{2}}(\tau) + O(\tau^3)
+		\end{multline}
+		Durch die symmterische Aufteilung des Potentials verringert sich also
+		der Fehler auf die 3. Ordnung.
+		
+		In dieser Darstellung ist jetzt einfach die Wirkung von
+		$U \approx \tilde{U}=U_{\frac{V}{2}}(\tau) U_T(\tau) U_{\frac{V}{2}}(\tau)$ zu berechnen,
+		denn:
+		\begin{align}
+		\label{it:hV}
+			U_{\frac{V}{2}}(\tau) \psi(x) &= \mathrm{e}^{-i \frac{\tau}{2} V(x)} \psi(x)\\
+		\label{it:T}
+			U_T(\tau) \psi(x) &= \mathcal{F}^{-1} \mathrm{e}^{-i \tau k^2} \mathcal{F} \psi(x)
+		\end{align}
+		wobei $\mathcal{F}$ die Fouriertransformation ist.
+		
+		Diese beiden Gleichungen definieren die Iteration der Split-Operator-Methode
+		für $n$ Schtitte bzw. Zeit $t=n \tau$
+		
+		\begin{description}
+			\item[Start]
+				\begin{itemize}
+					\item Propagation von $\psi(x)$ mit $U_{\frac{V}{2}}(\tau)$
+					\item Fouriertransformation zu $\psi(k)$
+					\item Propagation von $\psi(k)$ mit $U_T(\tau)$
+				\end{itemize}
+			\item[Iteration]
+				\begin{itemize}
+					\item inverse Fouriertransformation zu $\psi(x)$
+					\item Propagation von $\psi(x)$ mit $U_{\frac{V}{2}}(\tau)$
+					\item Propagation von $\psi(x)$ mit $U_{\frac{V}{2}}(\tau)$
+					\item Fouriertransformation zu $\psi(k)$
+					\item Propagation von $\psi(k)$ mit $U_T(\tau)$
+				\end{itemize}
+			\item[Ende]
+				\begin{itemize}
+					\item inverse Fouriertransformation zu $\psi(x)$
+					\item Propagation von $\psi(x)$ mit $U_{\frac{V}{2}}(\tau)$
+				\end{itemize}
+		\end{description}
+		wobei die Iteration $(n-1)$ Mal ausgeführt wird. Die zwei nacheinander folgenden
+		Propagationen mit $U_{\frac{V}{2}}(\tau)$ werden in der Implementierung natürlich
+		zu $U_V(\tau)$ zusammengefasst.
+		
+		\textbf{Bemerkung:} Es hindert einen niemend daran die Rollen von T und V zu
+		vertauschen	und statt $\tilde{U}$ den Operator 
+		$U_{\frac{T}{2}}(\tau) U_V(\tau) U_{\frac{T}{2}}(\tau)$ zu verwenden. Der einzige
+		Unterschied ist eine zurätliche Fouriertransformation am Anfang und eine 
+		inverse Fouriertransformation am Ende des Algorithmus, die mir angesichts der 
+		eher kurzen Iterationen für dieses Projekt unangebracht erschienen.
+
 		
   \section{Autokorrelationsfunktion}
-  \section{Diskrete Fourier-Transformation}
+		Ein zeitunabhängiger Hamiltonian $H$ eines Systems besitzt eine Basis in der er als 
+		Multiplikationsoperator wirkt. In dieser Basis besitzt $H$ eine Spektralzerlegung
+		der Form 
+		\begin{equation*}
+			H = \int_{\sigma(H)}{\epsilon \mathrm{d}\mu(\epsilon)}
+		\end{equation*}
+		mit Spektralmaß $\mu(\epsilon)$ und Spektrum $\sigma(H)$.
+		Da $H$ nun ein Multiplikationsoperator ist, lässt sich der
+		Zeit-Propagator formal einfach auswerten zu:
+		\begin{equation*}
+			U(t)=\exp\left(
+				-i t \int_{\sigma(H)}{\epsilon \mathrm{d}\mu(\epsilon)}
+			\right)
+			=\int_{\sigma(H)}{\mathrm{e}^{-i t \epsilon} \mathrm{d}\mu(\epsilon)}
+		\end{equation*}
+		Für die Autokorrelationsfunktion $c(t)$
+		gilt dann dementsprechend:
+		\begin{multline}
+			\label{eq:corr}
+			c(t) = \langle \psi,U(t) \psi\rangle
+					 = \int_{x} \psi^{*} U(t) \psi \\
+					 = \int_{x} \psi^{*}
+					 	  \int_{\sigma(H)}{\mathrm{e}^{-i t \epsilon}
+					 	 	   \mathrm{d}\mu(\epsilon)} \psi \\
+					 = \int_{\sigma(H)}{
+					 			\mathrm{e}^{-i t \epsilon}
+					 			\int_{x} \psi^{*}
+					 	 	   \mathrm{d}\mu(\epsilon)} \psi \\
+					 = \int_{\sigma(H)}{
+					 			\mathrm{e}^{-i t \epsilon}
+					 			\mathrm{d} \tilde{\mu}(\epsilon)}
+		\end{multline}
+		
+		Die inverse Fouriertransformation von $c(t)$ gibt ein moduliertes Spektrum
+		der Energieeigenwerte von H.
+		
+		\begin{multline}
+			\label{eq:corrft}
+			c(\epsilon) = \mathcal{F}[c](\epsilon) 
+			      = \frac{1}{\sqrt{2 \pi}}
+			     		\int_{\mathbb{R}} c(t) \mathrm{e}^{it \epsilon} \mathrm{d}t\\
+			     = \frac{1}{\sqrt{2 \pi}}
+		     			\int_{\sigma(H)}
+				     		\int_{\mathbb{R}} \mathrm{e}^{i t (\epsilon -\epsilon')}	\mathrm{d}t
+					 		\mathrm{d} \tilde{\mu}(\epsilon')\\
+			     = \sqrt{2 \pi}	
+			     		\int_{\sigma(H)} \delta(\epsilon -\epsilon')
+					 		\mathrm{d} \tilde{\mu}(\epsilon')
+		\end{multline}
+		
+		Um die Bedeutung von $c(\epsilon)$ besser zu verstehen, betrachte man einen
+		etwas weniger allgemeinen Fall eines Systems mit isolierten Eigenwerten
+		($H$ kompakt und normal da selbtstadjungiert). In einer Basis in der 
+		dieser Hamiltonian diagonal ist hat jeder Zustand zie Zerlegung
+		$\psi=\sum_{j}{a_j e_j}$ mit Eigenfunktionen $e_j$ zu Eigenenergie $\epsilon_j$.
+		Die Autokorrelation ist nach \eqref{eq:corr}
+		$c(t)= \sum_{j} |a_j|^2 \mathrm{e}^{-i t \epsilon_j}$ und das modulierte Spektrum
+		ist damit nach \eqref{eq:corrft}:
+		\begin{equation}
+			c(\epsilon)=\sqrt{2 \pi}
+				 \sum_{j} |a_j|^2 \mathrm{e}^{-i t \epsilon_j} \delta(\epsilon-\epsilon')
+		\end{equation}
+		Die $\delta$-Distribution in der letzten Formel kommt natürlich nur dann zustande,
+		wen über ganz $\mathbb{R}$ integriert wird. Für alle praktischen Zwecke steht
+		aber nur ein begrenztes Intervall $I=[0:T]$ zur Verfügung. Statt des echten Spektrums
+		bekommt man nach nur die Faltung von $c(\epsilon)$ mit $\mathcal{F}[w](\epsilon)$,
+		wobei $w(t)$ die Rechteck-Fensterfunktion mit Träger in I ist. Nach Faltungstheorem
+		erhält man:
+		\begin{multline}
+			\mathcal{F}[c w](\epsilon)
+				= \int_{\mathbb{R}} c(t) w(t) \mathrm{e}^{i t \epsilon} \mathrm{d}t \\
+				= \int_{\mathbb{R}}
+					 	\int_{\mathbb{R}}
+					 		 c(t) w(t') \delta(t-t') \frac{2 \pi}{(\sqrt{2 \pi})^2}
+					 		 	 \mathrm{e}^{i t \epsilon} 
+						\mathrm{d}t
+					\mathrm{d}t'\\
+				= \frac{1}{(\sqrt{2 \pi})^2} \int_{\mathbb{R}}
+					 	\int_{\mathbb{R}}
+					 		 c(t) w(t')
+					 		   \int_{\sigma(H)} \mathrm{e}^{i (t - t')\epsilon'} \mathrm{d}\mu(\epsilon')
+					 		 	 \mathrm{e}^{i t \epsilon} 
+						\mathrm{d}t
+					\mathrm{d}t'\\
+				= 
+ 		  	\int_{\sigma(H)} 
+					\left(\int_{\mathbb{R}}
+						 \frac{c(t)}{\sqrt{2 \pi}} \mathrm{e}^{i t\epsilon'} \mathrm{d}t\right)
+					\left(\int_{\mathbb{R}} 
+						\frac{w(t')}{\sqrt{2 \pi}}  \mathrm{e}^{i t' (\epsilon-\epsilon')}
+							\mathrm{d}t'\right)
+				\mathrm{d}\mu(\epsilon')\\
+				= \int_{\sigma(H)} 
+	 		  		\mathcal{F}[c](\epsilon') \mathcal{F}[w](\epsilon-\epsilon')
+					\mathrm{d}\mu(\epsilon')\\
+				= (\mathcal{F}[c] * \mathcal{F}[w])(\epsilon)
+		\end{multline}
+
+		Für $w(t)=\Theta(t)\Theta(T-t)$ erhält man
+		\begin{equation*}
+			W(\epsilon) =\mathcal{F}[w](\epsilon) = 
+				\frac{1}{\sqrt{2\pi}}\int_{0}^{T}	\mathrm{e}^{i t\epsilon} \mathrm{d}t
+			= -i \frac{\mathrm{e}^{i T E}-1}{\sqrt{2\pi} E}
+		\end{equation*}
+		\begin{equation*}
+			|W(\epsilon)| = \sqrt{\frac{1-\cos(T \epsilon)}{\pi \epsilon^2}}
+			= \frac{|\sin(\frac{T \epsilon}{2})|}{\pi |\epsilon|}
+		\end{equation*}
+		Das Rechteck-Fenster verschmiert also nebeneinander  liegende Peaks und verringert
+		die Auflösung des Verfahrens. Man kann das umgehen, indem man eine andere
+		Fenster-Funktion verwendet. Für dieses Projekt wurde die übliche
+		von-Hann Funktion 
+		\begin{equation}
+		\label{eq:hann}
+			w(t) = \left\{\begin{array}{cl}
+				\frac{1-\cos(\frac{2\pi t}{T})}{2}, & t \in I=[0:T]\\
+				0,                        & \mbox{sonst} 
+				\end{array}\right. 
+		\end{equation}
+		verwendet.
+  
+  \section{Diskrete Fouriertransformation}
+		Für eine Simulation, die in endlicher Zeit laufen soll, kann man keine
+		direkte Fouriertransformation benutzen, denn die symbolische Auswertung
+		der Integrale ist leider nur für sehr wenige Probleme mit kleinen Gittern
+		sinnvoll implementierbar. Deswegen diskretisiert man bei Simulationen
+		normalerweise den Ort (und Zeit) und geht von kontinuierlichen zu diskreten
+		Fouriertransformationen über.
+		
+		Sei $x \in \mathbb{C}^n$ ein Vektor dann ist die DFT von $x$ definiert
+		als
+		\begin{equation}
+			\hat{x}_\alpha
+			= \tilde{\mathcal{F}}[\hat{x}]_\alpha 
+			= \sum_{l=0}^{n-1} \mathrm{e}^{-2 \pi \frac{\alpha }{n} l} x_l
+		\end{equation}
+
+%		$\longrightarrow$
   \section{Eigenarten einiger Spektra}
 \end{document}
