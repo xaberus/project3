@@ -1,0 +1,69 @@
+\documentclass[10pt,a4paper,german]{scrartcl}
+\usepackage[utf8]{inputenc}
+
+\usepackage{acl2005}
+
+\usepackage[german]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{lmodern}
+%\usepackage{kpfonts}
+%\usepackage{fourier}
+%\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
+
+%\usepackage{times}
+%\usepackage{latexsym}
+
+\setlength\titlebox{2.5cm}    % Expanding the titlebox
+
+% Solution of the Schrödinger equation by a spectral method ☆
+% M.D Feit, J.A Fleck Jr., A Steiger
+% http://dx.doi.org/10.1016/0021-9991(82)90091-2
+
+% Time-dependent propagation of high energy laser beams through the atmosphere 
+% J. A. Fleck, J. R. Morris and M. D. Feit
+% http://dx.doi.org/10.1007/BF00896333
+
+\title{Energiespektrum aus Autokorrelationsfunktion}
+\author{Pavel Sterin}
+
+\begin{document}
+	\maketitle
+	\section{Split-Operator Methode}
+		Die Split-Operator Methode ist ein Verfahren zur numerischen Approximation
+		von Lösungen der Schrödingergleichung in kartesichen Koordinaten. Zur Vereinfachung
+		der Berechnungen setze ich verwende ich die Konvention $\hbar = 1$, $m=\frac{1}{2}$.
+		Damit erhält man eine einfache Form, der linearen DGL:
+
+		\begin{align*}
+				&\left(-\frac{\partial^2}{\partial x^2} + V(x,t)\right)\psi(x,t) 
+					= i \frac{\partial}{\partial t}\psi(x,t) \\
+				&= \left(T + V\right)\psi(x,t)
+					= i \frac{\partial}{\partial t}\psi(x,t)
+		\end{align*}
+		
+		Mit dem üblichen Ansatz für die zeitliche Evaluation von $ \psi(x,t)=U(t)\psi(x) $
+		(mit fixierter Wellenfunktion $\psi(x)$ und unitärem Zeit-Propagator $U(t)$) erhält man
+		die äquivalente Schrödingergleichung des Propagators:
+		\begin{equation*}
+			\left(T + V(t)\right) U(t) = i  \frac{\partial}{\partial t}U(t)
+		\end{equation*}
+		Die formale Lösung dieser Gleichung ist bekannterweise die Dyson Reihe, oder etwas
+		weniger allgemein für verschiedene Zeiten mit sich selbst kommutierenden Hammiltonian
+		$H(t)=T+V(t)$, $[H(t),H(t')]=0$ ist:
+		\begin{equation*}
+			U(t)=\exp\left(\int_{0}^{t}{-i (T+V(t')) \mathrm{d} t'}\right)		
+		\end{equation*}
+		Falls sich das Potential für kleine Zetdiffrenzen $\tau$ nur geringfügig ändert oder
+		sogar stets konstant ist, sodass $[H(t),H(t+\tau)]\approx 0$ gilt, geht diese Lösung
+		in das Operator-Exponential über:
+		\begin{equation} \label{eq:expform}
+			U(t,\tau)=\exp\left(-i \tau (T+V(t))\right)
+		\end{equation}
+		
+  \section{Autokorrelationsfunktion}
+  \section{Diskrete Fourier-Transformation}
+  \section{Eigenarten einiger Spektra}
+\end{document}
