@@ -6,23 +6,24 @@
 
 #include "simulation.h"
 
-typedef struct {
-  preferences_t * prefs;
+/*! split step operator class */
+typedef struct splitop {
+  preferences_t * prefs; /**< preferences used to create this operator */
 
-  fftw_plan      fwd;
-  fftw_plan      bwd;
+  fftw_plan      fwd;    /**< plan for forward fourier transform */
+  fftw_plan      bwd;    /**< plan for bachward fourier transform */
 
-  fftw_complex * apsi;
+  fftw_complex * apsi;   /**< reference wave function */
 
-  fftw_complex * psi;
-  fftw_complex * psik;
+  fftw_complex * psi;    /**< current system state */
+  fftw_complex * psik;   /**< temporary used for calculations in momentum space */
 
-  fftw_complex * eV;
-  fftw_complex * eVn;
-  fftw_complex * ehV;
-  fftw_complex * ehVn;
+  fftw_complex * eV;    /**< U_V position space */
+  fftw_complex * eVn;   /**< U_V/bins in position space */
+  fftw_complex * ehV;   /**< U_{V/2} in position space */
+  fftw_complex * ehVn;  /**< U_{V/2}/bins in position space */
 
-  fftw_complex * eT;
+  fftw_complex * eT;    /**< U_T in momentum space */
 } splitop_t;
 
 splitop_t * splitop_new(preferences_t * prefs);

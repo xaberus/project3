@@ -6,7 +6,10 @@
 
 #include <stdio.h>
 
-carray_t * carray_new(int length) {
+/** \memberof carray
+  creates a new array of length \a length */
+carray_t * carray_new(int length)
+{
   carray_t * r = malloc(sizeof(carray_t) + sizeof(complex double) * length);
   if (!r) { abort(); }
   r->length = length;
@@ -14,7 +17,11 @@ carray_t * carray_new(int length) {
   return r;
 }
 
-carray_t * carray_new_sized(int length, int alloc) {
+/** \memberof carray
+  creates a new array of length \a length
+  while preallocating \a alloc members */
+carray_t * carray_new_sized(int length, int alloc)
+{
   assert(alloc > length);
   carray_t * r = malloc(sizeof(carray_t) + sizeof(complex double) * alloc);
   if (!r) { abort(); }
@@ -23,7 +30,16 @@ carray_t * carray_new_sized(int length, int alloc) {
   return r;
 }
 
-carray_t * carray_append(carray_t * z, complex double x) {
+/*! \memberof carray
+ appends \a x to array \a z reallocating \a z if needed
+
+ the typical usage is:
+ \code
+     z = carray_append(z, x);
+ \endcode
+ */
+carray_t * carray_append(carray_t * z, complex double x)
+{
   if (z->length < z->alloc) {
     z->data[z->length++] = x;
     return z;

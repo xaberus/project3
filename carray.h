@@ -3,11 +3,13 @@
 
 #include <complex.h>
 
+/*! A rezizeable vector of complex doubles */
 typedef struct carray {
-  int            alloc;
-  int            length;
+  int            alloc;    /**< allocated length */
+  int            length;   /**< used length */
+  /*! c99 flexible array tail with \a alloc members
+      (field elements are allocated after the header) */
   complex double data[];
-  // field elements are allocated after the array
 } carray_t;
 
 carray_t * carray_new(int length);

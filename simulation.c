@@ -22,24 +22,33 @@
 
 #include "simulation.h"
 
+/*! \memberof results
+ creates an empty results struct */
 results_t * results_new() {
   results_t * res = malloc(sizeof(results_t));
   memset(res, 0, sizeof(results_t ));
   return res;
 }
 
+/*! \memberof results
+ releases memory used by results */
 void results_free(results_t * res) {
   free(res->c);
+  free(res->co);
   free(res->ck);
   free(res);
 }
 
+/*! \memberof preferences
+ allocates a new preferences struct */
 preferences_t * preferences_new() {
   preferences_t * prefs = malloc(sizeof(preferences_t));
   memset(prefs, 0, sizeof(preferences_t));
   return prefs;
 }
 
+/*! \memberof preferences
+ releases memory used by preferences */
 void preferences_free(preferences_t * prefs) {
   free(prefs->xpos);
   free(prefs->potential);
@@ -60,23 +69,31 @@ void preferences_free(preferences_t * prefs) {
   free(prefs);
 }
 
-int preferences_read(lua_State * L, preferences_t * prefs) {
+/*! \memberof preferences
+ * this function reads in the whole configuration needed for the simulation
+ */
+int preferences_read(lua_State * L, preferences_t * prefs)
+{
+  // reset lua stack, get config table from registry and save its position on the stack
   lua_settop(L, 0);
   lua_rawgeti(L, LUA_REGISTRYINDEX, prefs->config);
   int config = lua_gettop(L);
 
   printf("configuration: \n");
 
+  // get the number of bins for position space discretization */
   lua_getfield(L, config, "bins");
   if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, bins undefined\n"); return -1; }
   prefs->bins = lua_tointeger(L, -1); lua_pop(L, 1);
   printf("  bins:    %d\n", prefs->bins);
 
+  // get time discretization delta
   lua_getfield(L, config, "dt");
   if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, dt undefined\n"); return -1; }
   prefs->dt = lua_tonumber(L, -1); lua_pop(L, 1);
   printf("  dt:      %g\n", prefs->dt);
 
+  // get position space range [xmin:xmax]
   {
     lua_getfield(L, config, "range");
     if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, range undefined\n"); return -1; }
@@ -91,12 +108,20 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
   }
   printf("  range:   [%g;%g]\n", prefs->range.min, prefs->range.max);
 
+  // get number of steps to preform in each iteration
   lua_getfield(L, config, "steps");
   if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, steps undefined\n"); return -1; }
   prefs->steps = lua_tointeger(L, -1); lua_pop(L, 1);
   printf("  steps:   %d\n", prefs->steps);
 
+  // get number of iterations to run
+  lua_getfield(L, config, "runs");
+  if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, runs undefined\n"); return -1; }
+  prefs->runs = lua_tointeger(L, -1); lua_pop(L, 1);
+  printf("  runs:    %d\n", prefs->runs);
+
 #ifdef USE_CAIRO
+  // get number of steps to preform for each frame
   lua_getfield(L, config, "vstep");
   if (!lua_isnil(L, -1)) {
     prefs->vstep = lua_tointeger(L, -1);
@@ -104,6 +129,7 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
     prefs->vstep = -1;
   }
   lua_pop(L, 1);
+  // get number of frames to render
   lua_getfield(L, config, "vframes");
   if (!lua_isnil(L, -1)) {
     prefs->vframes = lua_tointeger(L, -1);
@@ -118,14 +144,11 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
   }
 #endif
 
-  lua_getfield(L, config, "runs");
-  if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, runs undefined\n"); return -1; }
-  prefs->runs = lua_tointeger(L, -1); lua_pop(L, 1);
-  printf("  runs:    %d\n", prefs->runs);
-
+  // equipatition of position space
   array_t * xpos = array_equipart(prefs->range.min, prefs->range.max, prefs->bins);
   prefs->xpos = xpos;
 
+  // evaluate potential function from config for each position
   {
     lua_getfield(L, config, "potential");
     if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, potential undefined\n"); return -1; }
@@ -147,6 +170,7 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
   }
   printf("  potential(x)\n");
 
+  // evaluate wavefunction  from config for each position
   {
     lua_getfield(L, config, "psi");
     if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, psi undefined\n"); return -1; }
@@ -174,6 +198,7 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
   }
   printf("  psi(x)\n");
 
+  // get filenames for output
   {
     lua_getfield(L, config, "output");
     if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output undefined\n"); return -1; }
@@ -206,19 +231,24 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
   printf("    dftcorr:     %s/%s\n", prefs->output.dir, prefs->output.dftcorr);
   printf("    theoenrg:    %s/%s\n", prefs->output.dir, prefs->output.theoenrg);
 
+  // number of steps
   printf("  derrived values are:\n");
   prefs->tsteps =  prefs->steps * prefs->runs;
   printf("    tsteps:      %d\n", prefs->tsteps);
 
+  // position space delta
   prefs->dx = prefs->xpos->data[1] - prefs->xpos->data[0];
   printf("    dx:          %g\n", prefs->dx);
 
+  // momentum space delta
   prefs->dk = 2 * M_PI / (prefs->range.max - prefs->range.min);
   printf("    dk:          %g\n", prefs->dk);
 
+  // energy delty
   prefs->dE = 2 * M_PI / (prefs->dt * prefs->tsteps);
   printf("    dE:          %g\n", prefs->dE);
 
+  // get at most 1000 theoretical energy values for spectrum plot
   {
     lua_getfield(L, config, "energy");
     if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, energy undefined\n"); return -1; }
@@ -238,12 +268,13 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
       ek = lua_tonumber(L, -1);
       lua_pop(L, 1);
       E = array_append(E, ek);
-    } while (ek < maxE);
+    } while (ek < maxE && E->length < 1000);
     lua_pop(L, 1);
     prefs->theoenrg = E;
   }
   printf("    theoenrg(k)\n");
 
+  // get the energy range for plot, this effectively just passed to gnuplot
   {
     lua_getfield(L, config, "enrgrange");
     if (!lua_isnil(L, -1)) {
@@ -261,44 +292,56 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
 
   printf("\n");
 
+  // we are done, release config table
   luaL_unref(L, LUA_REGISTRYINDEX, prefs->config);
   prefs->config = LUA_NOREF;
 
   return 0;
 }
 
-int start_simulation(preferences_t * prefs) {
+/*! \memberof preferences
+ * this function runs the simulation according to preferences \a prefs
+ */
+int start_simulation(preferences_t * prefs)
+{
   printf("starting simulation: \n");
 
+  // create a new split operator usind values from prefs
   splitop_t * sop = splitop_new(prefs);
 
+  // normalize the wavefunction
   splitop_prepare(sop);
 
-  /* sync */
+  // save the normalized wavefunction for later plot
   fftw_complex * psi = sop->psi;
   carray_t * spsi = prefs->psi;
   for (int k = 0; k < spsi->length; k++) {
     spsi->data[k] = psi[k];
   }
 
+  // save wavefunction so we have a reference
   splitop_save(sop);
   fftw_complex * apsi = sop->apsi;
 
   printf("  split operator created\n");
 
+  // allocate new results struct
   results_t * res = results_new(); prefs->results = res;
 
+  // cache some values (hopefully gcc will place them in registers)
   int bins = prefs->bins;
   int runs = prefs->runs;
   int steps= prefs->steps;
   int length = runs + 1;
 
+  // allocate an array for the corraltion function and specturm and the fftw plan
   carray_t * c = carray_new_sized(0, length);
+  carray_t * co = carray_new_sized(0, length);
   carray_t * ck = carray_new_sized(0, length);
-
   fftw_plan p = fftw_plan_dft_1d(length, c->data, ck->data, FFTW_FORWARD, FFTW_ESTIMATE);
 
 #ifdef USE_CAIRO
+  // render video if enabled
   if (prefs->vstep > 0 && prefs->vframes > 0) {
     struct stat sb;
     int len = strlen(prefs->output.dir) + 100;
@@ -331,13 +374,16 @@ int start_simulation(preferences_t * prefs) {
     cairo_surface_destroy(surface);
     printf("  done...                 \n");
   }
+  // restore initial wavefunction befora proceeding
   splitop_restore(sop);
 #endif
 
+  // this should always be 1, so just a safety check
   c = carray_append(c, cvect_skp(bins, psi, apsi));
 
   printf("  starting run\n");
 
+  /******** start simulation **********/
   for (int k = 0; k < runs; k++) {
     splitop_run(sop, steps);
     if (k % 100 == 0) {
@@ -346,38 +392,51 @@ int start_simulation(preferences_t * prefs) {
     }
     c = carray_append(c, cvect_skp(bins, psi, apsi));
   }
+  /********* simulation done **********/
 
   printf("  done...                 \n");
 
   printf("  hanning before dft\n");
   // Hann Fenster:
   double hannfkt = 2 * M_PI/(length);
-  for (int k = 0; k < length; k++) { c->data[k] *= .5 * (1 - cos(hannfkt * k)); }
+  for (int k = 0; k < length; k++) {
+    complex double z = c->data[k];
+    co->data[k] = z; // save original function
+    c->data[k] = z * .5 * (1 - cos(hannfkt * k));
+  }
 
   fftw_execute_dft(p, c->data, ck->data);
   printf("  calculated dft\n");
 
+  // normalize spectrum, as fftw wil not do this
   double nor = 1/sqrt(length);
   for (int k = 0; k < length; k++) { ck->data[k] *= nor; }
 
-  fftw_destroy_plan(p);
-  splitop_free(sop);
-
   res->c = c;
+  res->co = co;
   res->ck = ck;
   ck->length = c->length;
+  co->length = c->length;
+
+  // dispose of now unneded ressources
+  fftw_destroy_plan(p);
+  splitop_free(sop);
 
   printf("  cleaned up\n");
 
   return 0;
 }
 
-int dump_results(preferences_t * prefs) {
+/*! \memberof preferences
+ * this function just dumps the results \a prefs
+ */
+int dump_results(preferences_t * prefs)
+{
   int steps = prefs->steps;
   double dt = prefs->dt;
   double dE = prefs->dE;
   results_t * res = prefs->results;
-  carray_t * c = res->c;
+  carray_t * c = res->co; // the original function without hanning
   carray_t * ck = res->ck;
 
   array_t * xpos = prefs->xpos;
@@ -392,6 +451,7 @@ int dump_results(preferences_t * prefs) {
     }
   }
 
+  // dump initial wafevunction
   {
     int len = strlen(prefs->output.dir) + strlen(prefs->output.apsi) + 10;
     char path[len];
@@ -404,6 +464,7 @@ int dump_results(preferences_t * prefs) {
     fclose(fp);
   }
 
+  // dump potnetial used during simulation
   {
     int len = strlen(prefs->output.dir) + strlen(prefs->output.pot) + 10;
     char path[len];
@@ -415,6 +476,7 @@ int dump_results(preferences_t * prefs) {
     fclose(fp);
   }
 
+  // dump the correlation function
   {
     int len = strlen(prefs->output.dir) + strlen(prefs->output.corr) + 10;
     char path[len];
@@ -427,6 +489,7 @@ int dump_results(preferences_t * prefs) {
     fclose(fp);
   }
 
+  // dump the spectrum
   {
     int len = strlen(prefs->output.dir) + strlen(prefs->output.dftcorr) + 10;
     char path[len];
@@ -439,6 +502,7 @@ int dump_results(preferences_t * prefs) {
     fclose(fp);
   }
 
+  // dump the theoretic energies
   {
     int len = strlen(prefs->output.dir) + strlen(prefs->output.theoenrg) + 10;
     char path[len];
@@ -451,6 +515,7 @@ int dump_results(preferences_t * prefs) {
     fclose(fp);
   }
 
+  // dump variables for gnuplot
   {
     int len = strlen(prefs->output.dir) + strlen("stats") + 10;
     char path[len];
@@ -465,10 +530,9 @@ int dump_results(preferences_t * prefs) {
     fprintf(fp, "%d:", prefs->runs);
 
     {
-      array_t * V = prefs->potential;
       double min = 0, max=0;
-      for (int k = 0; k < V->length; k++) {
-        double z = V->data[k];
+      for (int k = 0; k < pot->length; k++) {
+        double z = pot->data[k];
         if (z < min) {
           min = z;
         }
@@ -481,10 +545,9 @@ int dump_results(preferences_t * prefs) {
     }
 
     {
-      carray_t * psi = prefs->psi;
       double min = 0, max=0;
-      for (int k = 0; k < psi->length; k++) {
-        double z = cabs(psi->data[k]);
+      for (int k = 0; k < apsi->length; k++) {
+        double z = cabs(apsi->data[k]);
         if (z < min) {
           min = z;
         }

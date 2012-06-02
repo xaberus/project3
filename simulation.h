@@ -6,14 +6,17 @@
 #include "array.h"
 #include "carray.h"
 
-typedef struct {
+/*! results struct */
+typedef struct retults {
+  carray_t * co;
   carray_t * c;
   carray_t * ck;
 } results_t;
 
 results_t * results_new();
+void results_free(results_t * res);
 
-typedef struct {
+typedef struct preferences {
   int        config;
   int        bins;
   double     dt;

@@ -1,11 +1,13 @@
 #ifndef _ARRAY_H_
 #define _ARRAY_H_
 
+/*! A rezizeable vector of doubles */
 typedef struct array {
-  int    alloc;
-  int    length;
+  int    alloc;   /**< allocated length */
+  int    length;  /**< used length */
+  /*! c99 flexible array tail with \a alloc members
+      (field elements are allocated after the header) */
   double data[];
-  // field elements are allocated after the array
 } array_t;
 
 array_t * array_new(int length);

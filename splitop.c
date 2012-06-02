@@ -5,15 +5,20 @@
 #include "splitop.h"
 #include "cvect.h"
 
-splitop_t * splitop_new(preferences_t * prefs) {
+/*! \memberof splitop
+ create new operator using values in prefs */
+splitop_t * splitop_new(preferences_t * prefs)
+{
   splitop_t * w = malloc(sizeof(splitop_t)); assert(w);
   w->prefs = prefs;
 
+  // cache values
   double * V = prefs->potential->data;
   int bins = prefs->bins;
   double dt = prefs->dt;
   double dk = prefs->dk;
 
+  // allocate all the arrays needed
   w->eV = fftw_alloc_complex(bins); assert(w->eV);
   w->eVn = fftw_alloc_complex(bins); assert(w->eVn);
   w->ehV = fftw_alloc_complex(bins); assert(w->ehV);
@@ -23,27 +28,34 @@ splitop_t * splitop_new(preferences_t * prefs) {
   w->psi = fftw_alloc_complex(bins); assert(w->psi);
   w->psik = fftw_alloc_complex(bins); assert(w->psik);
 
+  for (int k = 0; k < bins; k++) {
+    w->apsi[k] = 0;
+  }
+
+  // calculate position space propagators
   for (int n = 0; n < bins; n++) {
     w->eV[n] = cexp(-I * V[n] * dt);
     w->eVn[n] = w->eV[n] / bins;
     w->ehV[n] = cexp(-I * V[n] * dt / 2);
     w->ehVn[n] = w->ehV[n] / bins;
   }
+
+  // calculate momentum space propagator
   for (int n = 0; n < bins; n++) {
     if (n < bins/2) {
       w->eT[n] = cexp(-I * dk * dk * n * n * dt);
-    } else {
+    } else { // negative frequencies come after bins/2
       int m = (n - bins);
       w->eT[n] = cexp(-I * dk * dk * m * m * dt);
     }
   }
 
 
-  /*w->fwd = fftw_plan_dft_1d(bins, NULL, NULL, FFTW_FORWARD, FFTW_ESTIMATE);
-  w->bwd = fftw_plan_dft_1d(bins, NULL, NULL, FFTW_BACKWARD, FFTW_ESTIMATE);*/
+  // prepare fftw plans for DFT
   w->fwd = fftw_plan_dft_1d(bins, w->psi, w->psik, FFTW_FORWARD, FFTW_MEASURE);
   w->bwd = fftw_plan_dft_1d(bins, w->psik, w->psi, FFTW_BACKWARD, FFTW_MEASURE);
 
+  // setup initial system state wavefunction
   for (int k = 0; k < bins; k++) {
     w->psi[k] = prefs->psi->data[k];
   }
@@ -51,7 +63,10 @@ splitop_t * splitop_new(preferences_t * prefs) {
   return w;
 }
 
-void splitop_free(splitop_t * w) {
+/*! \memberof splitop
+ release all ressources used by splitop */
+void splitop_free(splitop_t * w)
+{
   fftw_destroy_plan(w->fwd);
   fftw_destroy_plan(w->bwd);
   fftw_free(w->eV);
@@ -65,7 +80,10 @@ void splitop_free(splitop_t * w) {
   free(w);
 }
 
-void splitop_run(splitop_t * w, int times) {
+/*! \memberof splitop
+ run split-step algorithm \a times times */
+void splitop_run(splitop_t * w, int times)
+{
   int bins = w->prefs->bins;
   fftw_complex * ehV = w->ehV;
   fftw_complex * eVn = w->eVn;
@@ -75,35 +93,45 @@ void splitop_run(splitop_t * w, int times) {
   fftw_complex * psi = w->psi;
   fftw_complex * psik = w->psik;
 
+  // naiive algorithm, just for reference / in case I forget...
   /*fftw_complex * p, * as, * ae;
   for (int k = 0; k < times; k++) {
-    //for (int n = 0; n < bins; n++) { psi[n] *= ehV[n]; }
-    for (p = psi, as = ehV, ae = as + bins; as < ae; as++, p++) { (*p) *= *as; }
+    for (int n = 0; n < bins; n++) { psi[n] *= ehV[n]; }
     fftw_execute_dft(w->fwd, psi, psik);
-    //for (int n = 0; n < bins; n++) { psik[n] *= eT[n]; }
-    for (p = psik, as = eT, ae = as + bins; as < ae; as++, p++) { (*p) *= *as; }
+    for (int n = 0; n < bins; n++) { psik[n] *= eT[n]; }
     fftw_execute_dft(w->bwd, psik, psi);
-    //for (int n = 0; n < bins; n++) { psi[n] *= ehV[n] / bins; }
-    for (p = psi, as = ehV, ae = as + bins; as < ae; as++, p++) { (*p) *= *as/bins; }
+    for (int n = 0; n < bins; n++) { psi[n] *= ehV[n] / bins; }
   }*/
 
   if (times > 0) {
+    // propagate with U_{V/2}
     cvect_mult_asign(bins, psi, ehV);
+    // DFT to momentum space
     fftw_execute_dft(w->fwd, psi, psik);
+    // propagate with U_T
     cvect_mult_asign(bins, psik, eT);
     for (int k = 0; k < times - 1; k++) {
+      // DFT to position space
       fftw_execute_dft(w->bwd, psik, psi);
+      // fftw won't normalize psi, so propagate with U_V/bins
       cvect_mult_asign(bins, psi, eVn);
+      // DFT to momentum space
       fftw_execute_dft(w->fwd, psi, psik);
+      // propagate with U_T
       cvect_mult_asign(bins, psik, eT);
     }
+    // DFT to position space
     fftw_execute_dft(w->bwd, psik, psi);
+    // fftw won't normalize psi, so propagate with U_{V/2}/bins
     cvect_mult_asign(bins, psi, ehVn);
   }
 
 }
 
-void splitop_prepare(splitop_t * w) {
+/*! \memberof splitop
+ normalize current state */
+void splitop_prepare(splitop_t * w)
+{
   int bins = w->prefs->bins;
   fftw_complex * psi = w->psi;
   double A = cvect_normsq(bins, psi);
@@ -112,7 +140,10 @@ void splitop_prepare(splitop_t * w) {
   }
 }
 
-void splitop_save(splitop_t * w) {
+/*! \memberof splitop
+ save current state */
+void splitop_save(splitop_t * w)
+{
   int bins = w->prefs->bins;
   fftw_complex * psi = w->psi;
   fftw_complex * apsi = w->apsi;
@@ -121,7 +152,10 @@ void splitop_save(splitop_t * w) {
   }
 }
 
-void splitop_restore(splitop_t * w) {
+/*! \memberof splitop
+ restore saved state */
+void splitop_restore(splitop_t * w)
+{
   int bins = w->prefs->bins;
   fftw_complex * psi = w->psi;
   fftw_complex * apsi = w->apsi;
@@ -131,7 +165,10 @@ void splitop_restore(splitop_t * w) {
 }
 
 #ifdef USE_CAIRO
-void splitop_draw(splitop_t * w, cairo_t * cr, cairo_rectangle_t rect, fftw_complex * psi) {
+/*! \memberof splitop
+ draw some nice representation of the current state */
+void splitop_draw(splitop_t * w, cairo_t * cr, cairo_rectangle_t rect, fftw_complex * psi)
+{
   cairo_save(cr);
   cairo_rectangle(cr, rect.x, rect.y, rect.width, rect.height);
   cairo_clip(cr);

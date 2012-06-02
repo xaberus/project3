@@ -5,19 +5,28 @@
 #include <emmintrin.h>
 #include <smmintrin.h>
 
+/*! \class cvect
+ a pointer to a complex array with impicit length */
+
+/*! \memberof cvect
+ calculates the scalar product of \a a with itself */
 inline static
-double cvect_normsq(int len, complex double a[len]) {
+double cvect_normsq(int len, complex double * a)
+{
   double A = 0;
   for (int k = 0; k < len; k++) {
-    complex double z = a[k];
+    complex double z = *(a++);
     double x = creal(z), y = cimag(z);
     A += x * x + y * y;
   }
   return A;
 }
 
+/*! \memberof cvect
+ calculates the scalar product of \a a and \a b */
 inline static
-fftw_complex cvect_skp(int len, complex double * a, complex double * b) {
+fftw_complex cvect_skp(int len, complex double * a, complex double * b)
+{
   fftw_complex c = 0;
   for (; len > 0 ; len--, a++, b++) {
     c += conj(*a)* *b;
@@ -25,10 +34,21 @@ fftw_complex cvect_skp(int len, complex double * a, complex double * b) {
   return c;
 }
 
-/* a *= z */
+/*! \memberof cvect
+ the operation of this function is to assign to each member of \a a
+ the value of a[i]*z[i]
+
+ as this function is one of the bottlenecks in the computation
+ sse4.1 intrinsics are employes to help the compiler...
+ */
 inline static
-void cvect_mult_asign(int len, complex double * a, complex double * z) {
-  //for (int n = 0; n < len; n++) { a[n] *= z[n]; }
+void cvect_mult_asign(int len, complex double * a, complex double * z)
+{
+  /*! the plain code for this function would be
+    \code
+      for (int n = 0; n < len; n++) { a[n] *= z[n]; }
+    \endcode
+  */
   for (int n = 0; n < len; n++, a++, z++) {
     double * va = (double *) a;
     double * vz = (double *) z;
