@@ -1,8 +1,10 @@
 cmake_minimum_required (VERSION 2.8.6)
 project(projekt)
 include(FindPkgConfig)
+find_package(Doxygen REQUIRED)
 find_program(FFMPEG ffmpeg)
 find_program(GNUPLOT gnuplot)
+find_program(PDFLATEX pdflatex)
 
 set(PRESETS
   "simple"
@@ -164,7 +166,6 @@ foreach(PRESET ${PRESETS})
 
   if(${CAIRO_FOUND})
     add_custom_target(${PRESET}
-      true
       DEPENDS
         "${projekt_SOURCE_DIR}/${PRESET}/apsi.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/corr.dat"
@@ -178,7 +179,6 @@ foreach(PRESET ${PRESETS})
         "${projekt_SOURCE_DIR}/${PRESET}/spektrum.pdf")
     else()
     add_custom_target(${PRESET}
-      true
       DEPENDS
         "${projekt_SOURCE_DIR}/${PRESET}.lua"
         "${projekt_SOURCE_DIR}/${PRESET}/apsi.dat"
@@ -192,3 +192,34 @@ foreach(PRESET ${PRESETS})
         "${projekt_SOURCE_DIR}/${PRESET}/spektrum.pdf")
     endif()
 endforeach()
+
+add_custom_command(
+  OUTPUT
+    "${projekt_SOURCE_DIR}/adoc"
+  COMMAND
+    ${DOXYGEN_EXECUTABLE} "${projekt_SOURCE_DIR}/Doxyfile"
+  WORKING_DIRECTORY
+    "${projekt_SOURCE_DIR}"
+  COMMENT
+    "Generating API documentation with Doxygen"
+  VERBATIM)
+
+add_custom_command(
+  OUTPUT
+    "${projekt_SOURCE_DIR}/doc/projekt3.pdf"
+  COMMAND
+    ${PDFLATEX} "${projekt_SOURCE_DIR}/doc/projekt3.tex"
+  WORKING_DIRECTORY
+    "${projekt_SOURCE_DIR}/doc"
+  DEPENDS
+    "${projekt_SOURCE_DIR}/doc/projekt3.tex"
+  COMMENT
+    "Generating LaTeX doc"
+  VERBATIM)
+
+add_custom_target(doc
+  DEPENDS
+    "${projekt_SOURCE_DIR}/adoc"
+    "${projekt_SOURCE_DIR}/doc/projekt3.pdf"
+  COMMENT
+    "Generating documentation")
