@@ -237,7 +237,7 @@ int preferences_read(lua_State * L, preferences_t * prefs) {
       assert(lua_isnumber(L, -1));
       ek = lua_tonumber(L, -1);
       lua_pop(L, 1);
-      array_append(E, ek);
+      E = array_append(E, ek);
     } while (ek < maxE);
     lua_pop(L, 1);
     prefs->theoenrg = E;

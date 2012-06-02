@@ -1,34 +1,30 @@
 local math = require("math")
 local complex = require("complex")
 
-local omega = 40;
-local A = math.sqrt(4 * omega)
+local exp = math.exp
 
 config = {
   bins = 4096;
-  dt = 0.01;
-  range = {-25,25};
+  dt = 0.0001;
+  range = {-7,7};
   steps = 10;
-  --runs = 10000;
-  runs = 10000;
+  runs = 20000;
   --
   --vstep = 100;
   --vframes = 200;
   --
   potential = function(x)
-    return omega * x ^ 2;
+    local k0, k2, k3, k4 = -100, 20, .5, 1
+    return  k0-k2*x^2+k3*x^3+k4*x^4
   end;
   psi = function(x)
-    local a = .5
-    local aa = a * a
-    local x0 = 0
-    local k0 = 10
-    local xx = (x-x0) * (x-x0)
-    return  math.exp(-xx/(aa)) * complex.exp({0, k0*(x)})
+    local a, s = 1.9, 0.87
+    return exp(-(x-a)^2/(2*s^2)) + exp(-(x+a)^2/(2*s^2)) * complex.exp({0, 4 * x})
   end;
   energy = function(k)
-    return A * (.5 + k)
+    return k*2000
   end;
+  enrgrange = {0, 205};
   output = {
     dir = "./simple";
     apsi = "apsi.dat";

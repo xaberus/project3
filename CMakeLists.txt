@@ -15,7 +15,7 @@ set(PRESETS
 #include_directories()
 
 pkg_check_modules(PKG REQUIRED "fftw3" "lua")
-pkg_check_modules(CAIRO REQUIRED "cairo")
+#pkg_check_modules(CAIRO REQUIRED "cairo")
 
 set(CFLAGS_LIST
   "-std=gnu99"
@@ -113,6 +113,8 @@ foreach(PRESET ${PRESETS})
       OUTPUT
         "${projekt_SOURCE_DIR}/${PRESET}/movie.webm"
       COMMAND
+        rm -f "${projekt_SOURCE_DIR}/${PRESET}/movie.webm"
+      COMMAND
         ${FFMPEG} -r 20 -b 9600 -i
           "${projekt_SOURCE_DIR}/${PRESET}/video/image%05d.png"
           "${projekt_SOURCE_DIR}/${PRESET}/movie.webm"
@@ -169,7 +171,11 @@ foreach(PRESET ${PRESETS})
         "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/theoenrg.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/movie.webm")
+        "${projekt_SOURCE_DIR}/${PRESET}/movie.webm"
+
+        "${projekt_SOURCE_DIR}/${PRESET}/init.pdf"
+        "${projekt_SOURCE_DIR}/${PRESET}/corr.pdf"
+        "${projekt_SOURCE_DIR}/${PRESET}/spektrum.pdf")
     else()
     add_custom_target(${PRESET}
       true
