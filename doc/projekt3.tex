@@ -292,7 +292,7 @@
 		Das Rechteck-Fenster verschmiert also nebeneinander  liegende Peaks und verringert
 		die Auflösung des Verfahrens. Man kann das umgehen, indem man eine andere
 		Fenster-Funktion verwendet. Für dieses Projekt wurde die übliche
-		von-Hann Funktion 
+		von-Hann Funktion  
 		\begin{equation}
 		\label{eq:hann}
 			w(t) = \left\{\begin{array}{cl}
@@ -310,14 +310,68 @@
 		normalerweise den Ort (und Zeit) und geht von kontinuierlichen zu diskreten
 		Fouriertransformationen über.
 		
+		Sei $x(t)$ ein zunächst kontinuierliches Signal. Durch Festlegen eines
+		Samplingabstands $\tau$ erhält man den Dirac-Kamm $s(t)=\delta(t-m \tau)$.
+		Ein diskretisiertes Signal ist dann das punktweise Produkt von $s(t)$ und $x(t)$.
+		Unter des Annahme, dass $x(t)$ periodisch ist mit $x(t)=x(t+n\tau)$ erhält
+		man für die für die Fouriertransformierte dann:
+		
+		\begin{multline*}
+			\mathcal{F}[x s](\epsilon) 
+				= \frac{1}{\sqrt{2 \pi}}\int_{\mathbb{R}}{
+					 \sum_{m=-\infty}^{\infty} x(t)\delta(t-m\tau)
+						 \mathrm{e}^{- i t \epsilon}
+					 \mathrm{d}t }\\
+				= \frac{1}{\sqrt{2 \pi}}
+				  \sum_{m=-\infty}^{\infty} x(m\tau) \mathrm{e}^{- i m \tau \epsilon} \\
+  			= \frac{1}{\sqrt{2 \pi}} \sum_{l=-\infty}^{\infty}
+					 \left(\sum_{m=0}^{n-1} x(m\tau) \mathrm{e}^{- i m \tau \epsilon}\right)
+					  \mathrm{e}^{- i l n \tau \epsilon}\\
+				= \left(\sum_{m=0}^{n-1} x(m\tau) \mathrm{e}^{- i m \tau \epsilon}\right)
+				  \cdot \frac{1}{\sqrt{2 \pi}}
+				  \left( \sum_{l=-\infty}^{\infty} \mathrm{e}^{- i l n \tau \epsilon} \right) \\
+				= \tilde{\mathcal{F}}[\hat{x}](\epsilon)
+					\left(\frac{\sqrt{2\pi}}{\tau}
+				  	\sum_{l=-\infty}^{\infty} \delta\left(
+				  	  n \epsilon - l \frac{2\pi}{\tau}
+				  	\right)
+				  \right)
+		\end{multline*}
+		
+		Die Transformierte eines periodischen diskreten Signals ist also selbst
+		von der gleichen Form. Insbesondere folgt aus der letzen Gleichung, dass
+		\begin{equation}
+			\epsilon_l = \frac{2\pi}{\tau}\frac{l}{n} = \frac{2\pi}{T} l
+		\end{equation}
+		und die Difinition der diskreten Fourierfransformation:
 		Sei $x \in \mathbb{C}^n$ ein Vektor dann ist die DFT von $x$ definiert
 		als
-		\begin{equation}
+		\begin{multline}
+		\label{eq:dft}
 			\hat{x}_\alpha
 			= \tilde{\mathcal{F}}[\hat{x}]_\alpha 
-			= \sum_{l=0}^{n-1} \mathrm{e}^{-2 \pi \frac{\alpha }{n} l} x_l
-		\end{equation}
+			= \sum_{m=0}^{n-1} x_m \mathrm{e}^{- i m \tau \epsilon_\alpha}\\
+			= \sum_{m=0}^{n-1} x_m \mathrm{e}^{- i m \tau  \frac{2\pi}{n\tau} \alpha}
+			= \sum_{m=0}^{n-1} x_m \mathrm{e}^{- i 2\pi \frac{m}{n} \alpha}
+		\end{multline}
+		
+		Bemerkenswert ist, dass die Gleichung \eqref{eq:dft} in keinerlei Weise
+		mehr von dem Samplingabstand abhängt, woraus sich die Universalität
+		dieser Transformation ergibt. Die anfangs benutze Voraussetzung der
+		Periodizität des Signals ist also für jede Funktion auf einem endlichen
+		Intervall erfüllbar: man setzt die Funktion einfach periodisch fort.
+		
+		Andereseits muss man bei der Simulation aufpassen, dass des Samplingbereich
+		groß genug gewählt wird, damit die Simulation nie an den Rand des Intervalls
+		kommen kann, was meist unerwünschte Effekte der Periodizität zur Folge hätte.
 
 %		$\longrightarrow$
-  \section{Eigenarten einiger Spektra}
+  \section{Betrachtung einiger Spektra}
+  	\subsection{Asymetrischer Doppeltopf}
+  		\begin{equation}
+  			V(x)= k_0 - k_2 x^2 x + k_3 x^3 k_4 x^4
+  		\end{equation}
+  		mit $k_0 = -100$, $k_2=40$, $k_3=0.5$ und $k_4=1$
+  	\subsection{Potentialkasten}
+  	\subsection{Harmonischer Oszillator}
 \end{document}

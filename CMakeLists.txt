@@ -17,7 +17,7 @@ set(PRESETS
 #include_directories()
 
 pkg_check_modules(PKG REQUIRED "fftw3" "lua")
-#pkg_check_modules(CAIRO REQUIRED "cairo")
+pkg_check_modules(CAIRO REQUIRED "cairo")
 
 set(CFLAGS_LIST
   "-std=gnu99"
@@ -115,12 +115,10 @@ foreach(PRESET ${PRESETS})
       OUTPUT
         "${projekt_SOURCE_DIR}/${PRESET}/movie.webm"
       COMMAND
-        rm -f "${projekt_SOURCE_DIR}/${PRESET}/movie.webm"
-      COMMAND
-        ${FFMPEG} -r 20 -b 9600 -i
+        ${FFMPEG} -y -r 20 -b 9600 -i
           "${projekt_SOURCE_DIR}/${PRESET}/video/image%05d.png"
           "${projekt_SOURCE_DIR}/${PRESET}/movie.webm"
-      DEPENDS
+      MAIN_DEPENDENCY
         "${projekt_SOURCE_DIR}/${PRESET}/video/image00000.png")
   endif()
 

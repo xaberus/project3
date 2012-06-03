@@ -29,7 +29,19 @@ set xlabel "Energie"
 
 set xrange [Emin : Emax]
 
+set ytics nomirror
+set y2tics
+
+set tics out
+
+set noy2tics
+
+set y2range [-1 : 10]
+
+set autoscale  y
+#set autoscale y2
+
 plot \
-  "dftcorr.dat" using 1:4 with lines title "|F[<psi|U(t)|psi>](E)|", \
-  "theoenrg.dat" using 2:(-1) with impulses title "theoretische Energien";
+  "dftcorr.dat" using 1:4 axis x1y1 with lines title "|F[<psi|U(t)|psi>](E)|", \
+  "theoenrg.dat" using 2:(-1) axis x1y2 with impulses title "theoretische Energien";
 

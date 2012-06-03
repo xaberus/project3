@@ -248,31 +248,8 @@ int preferences_read(lua_State * L, preferences_t * prefs)
   prefs->dE = 2 * M_PI / (prefs->dt * prefs->tsteps);
   printf("    dE:          %g\n", prefs->dE);
 
-  // get at most 1000 theoretical energy values for spectrum plot
-  {
-    lua_getfield(L, config, "energy");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, energy undefined\n"); return -1; }
-    int energy = lua_gettop(L);
-
-    array_t * E = array_new_sized(0, 100);
-    double maxE = prefs->dE * prefs->runs, ek;
-    int k = 0;
-
-    printf("  maximal energy detectable is %g\n", maxE);
-
-    do {
-      lua_pushvalue(L, energy);
-      lua_pushnumber(L, k++);
-      lua_call(L, 1, 1);
-      assert(lua_isnumber(L, -1));
-      ek = lua_tonumber(L, -1);
-      lua_pop(L, 1);
-      E = array_append(E, ek);
-    } while (ek < maxE && E->length < 1000);
-    lua_pop(L, 1);
-    prefs->theoenrg = E;
-  }
-  printf("    theoenrg(k)\n");
+  double maxE = prefs->dE * prefs->runs;
+  printf("  maximal energy detectable is %g\n", maxE);
 
   // get the energy range for plot, this effectively just passed to gnuplot
   {
@@ -285,10 +262,38 @@ int preferences_read(lua_State * L, preferences_t * prefs)
       lua_rawgeti(L, range, 2);
       if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, enrgrange.max undefined\n"); return -1; }
       prefs->enrgrange.max = lua_tonumber(L, -1); lua_pop(L, 1);
+    } else {
+      prefs->enrgrange.min = 0;
+      prefs->enrgrange.max = maxE;
     }
     lua_pop(L, 1);
   }
   printf("  enrgrange [%g;%g]\n", prefs->enrgrange.min, prefs->enrgrange.max);
+
+  // get at most 1000 theoretical energy values for spectrum plot
+  {
+    lua_getfield(L, config, "energy");
+    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, energy undefined\n"); return -1; }
+    int energy = lua_gettop(L);
+
+    array_t * E = array_new_sized(0, 100);
+    double ek;
+    double lim = prefs->enrgrange.max;
+    int k = 0;
+
+    do {
+      lua_pushvalue(L, energy);
+      lua_pushnumber(L, k++);
+      lua_call(L, 1, 1);
+      assert(lua_isnumber(L, -1));
+      ek = lua_tonumber(L, -1);
+      lua_pop(L, 1);
+      E = array_append(E, ek);
+    } while (ek < lim && E->length < 1000);
+    lua_pop(L, 1);
+    prefs->theoenrg = E;
+  }
+  printf("    theoenrg(k)\n");
 
   printf("\n");
 
