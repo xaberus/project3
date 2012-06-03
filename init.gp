@@ -18,9 +18,9 @@ set terminal pdfcairo solid size 13cm,8cm
 set output "init.pdf"
 
 set grid x y2
-set key center top title " "
+#set key center top title " "
 
-set title "Startbedingungenn"
+#set title "Startbedingungenn"
 
 set xlabel "Ort"
 set xrange [rangemin : rangemax]
@@ -41,6 +41,6 @@ set autoscale  y
 set autoscale y2
 
 plot \
-  "pot.dat" axis x1y1 with lines, \
-  "apsi.dat" using 1:4 axis x2y2 with lines; \
+  "pot.dat" axis x1y1 with lines linestyle 3, \
+  "apsi.dat" using 1:4 axis x2y2 with lines linestyle 1; \
 

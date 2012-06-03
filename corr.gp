@@ -20,10 +20,12 @@ set output "corr.pdf"
 set grid x y2
 set key center top title " "
 
-set title "Autokorrelation"
+#set title "Autokorrelation"
+
+set xrange [0 : dt*steps*runs/5]
 
 set xlabel "Zeit"
 
 plot \
-  "corr.dat" axis x1y1 with lines title "<psi|U(t)|psi>"
+  "corr.dat" axis x1y1 with lines linestyle 3 title "c(t)"
 

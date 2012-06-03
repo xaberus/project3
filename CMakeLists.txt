@@ -10,6 +10,7 @@ set(PRESETS
   "simple"
   "square"
   "harmosca"
+  "harmosc1"
 )
 
 #set(CMAKE_VERBOSE_MAKEFILE true)

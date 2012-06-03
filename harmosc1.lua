@@ -14,19 +14,19 @@ config = {
     return omega^2/4 * x ^ 2;
   end;
   psi = function(x)
-    local a = .5
-    local aa = a * a
-    local x0 = 0
-    local k0 = 10
-    local xx = (x-x0) * (x-x0)
-    return  math.exp(-xx/(aa)) * complex.exp({0, k0*(x)})
+    --return  {exp(-.5*omega/4/sqrt(2.5)*x^2),0}
+    --return  {exp(-omega/4*x^2),0}
+    return {
+      exp(-omega/4*x^2) + (x*sqrt(omega))/exp(x^2*omega/4.),
+      0
+    }
   end;
   energy = function(k)
     return omega * (.5 + k)
   end;
-  enrgrange = {0, 200};
+  enrgrange = {0, 2*omega};
   output = {
-    dir = "./harmosca";
+    dir = "./harmosc1";
     apsi = "apsi.dat";
     pot = "pot.dat";
     corr = "corr.dat";

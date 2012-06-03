@@ -17,13 +17,13 @@ dE=`cut -d: -f 14 stats`
 Emin=`cut -d: -f 15 stats`
 Emax=`cut -d: -f 16 stats`
 
-set terminal pdfcairo solid size 13cm,8cm
+set terminal pdfcairo enhanced solid size 13cm,8cm
 set output "spektrum.pdf"
 
 set grid x y2
 set key center top title " "
 
-set title "Autokorrelation"
+#set title "Autokorrelation"
 
 set xlabel "Energie"
 
@@ -42,6 +42,6 @@ set autoscale  y
 #set autoscale y2
 
 plot \
-  "dftcorr.dat" using 1:4 axis x1y1 with lines title "|F[<psi|U(t)|psi>](E)|", \
-  "theoenrg.dat" using 2:(-1) axis x1y2 with impulses title "theoretische Energien";
+  "dftcorr.dat" using 1:4 axis x1y1 with lines linestyle 3 title "|F[c(t)](eps)|", \
+  "theoenrg.dat" using ($2):(-1) axis x1y2 with impulses linestyle 1 title "theoretische Energien";
 

@@ -368,12 +368,12 @@ int start_simulation(preferences_t * prefs)
 
     cairo_surface_t * surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
     cairo_t *cr = cairo_create(surface);
-    for (int k = 0; k < prefs->vframes ; k++) {
+    for (int k = 0; k <= prefs->vframes ; k++) {
       fprintf(stderr, "  video (%g), frame %u\r", cvect_normsq(bins, psi), k);
-      splitop_run(sop, prefs->vstep);
       splitop_draw(sop, cr, (cairo_rectangle_t){0, 0, width, height}, psi);
       snprintf(path, len, "%s/video/image%05u.png", prefs->output.dir, k);
       cairo_surface_write_to_png(surface, path);
+      splitop_run(sop, prefs->vstep);
     }
     cairo_destroy(cr);
     cairo_surface_destroy(surface);
