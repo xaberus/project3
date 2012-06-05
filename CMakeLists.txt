@@ -88,6 +88,7 @@ foreach(PRESET ${PRESETS})
         "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/theoenrg.dat"
+        "${projekt_SOURCE_DIR}/${PRESET}/stats"
         "${projekt_SOURCE_DIR}/${PRESET}/video/image00000.png"
       COMMAND
         mkdir -p "${projekt_SOURCE_DIR}/${PRESET}"
@@ -103,6 +104,7 @@ foreach(PRESET ${PRESETS})
         "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/theoenrg.dat"
+        "${projekt_SOURCE_DIR}/${PRESET}/stats"
       COMMAND
         mkdir -p "${projekt_SOURCE_DIR}/${PRESET}"
       COMMAND
@@ -110,6 +112,8 @@ foreach(PRESET ${PRESETS})
       MAIN_DEPENDENCY
         "${projekt_SOURCE_DIR}/${PRESET}.lua")
   endif()
+
+  set(CONFS ${CONFS} "${projekt_SOURCE_DIR}/${PRESET}.lua")
 
   if(${CAIRO_FOUND})
     add_custom_command(
@@ -176,7 +180,7 @@ foreach(PRESET ${PRESETS})
         "${projekt_SOURCE_DIR}/${PRESET}/init.pdf"
         "${projekt_SOURCE_DIR}/${PRESET}/corr.pdf"
         "${projekt_SOURCE_DIR}/${PRESET}/spektrum.pdf")
-    else()
+  else()
     add_custom_target(${PRESET}
       DEPENDS
         "${projekt_SOURCE_DIR}/${PRESET}.lua"
@@ -189,7 +193,11 @@ foreach(PRESET ${PRESETS})
         "${projekt_SOURCE_DIR}/${PRESET}/init.pdf"
         "${projekt_SOURCE_DIR}/${PRESET}/corr.pdf"
         "${projekt_SOURCE_DIR}/${PRESET}/spektrum.pdf")
-    endif()
+  endif()
+  set(PLOTS ${PLOTS}
+    "${projekt_SOURCE_DIR}/${PRESET}/init.pdf"
+    "${projekt_SOURCE_DIR}/${PRESET}/corr.pdf"
+    "${projekt_SOURCE_DIR}/${PRESET}/spektrum.pdf")
 endforeach()
 
 add_custom_command(
@@ -203,6 +211,11 @@ add_custom_command(
     "Generating API documentation with Doxygen"
   VERBATIM)
 
+message("using plots:")
+foreach(PLOT ${PLOTS})
+  message(${PLOT})
+endforeach()
+
 add_custom_command(
   OUTPUT
     "${projekt_SOURCE_DIR}/doc/projekt3.pdf"
@@ -212,6 +225,8 @@ add_custom_command(
     "${projekt_SOURCE_DIR}/doc"
   DEPENDS
     "${projekt_SOURCE_DIR}/doc/projekt3.tex"
+    ${PLOTS}
+    ${CONFS}
   COMMENT
     "Generating LaTeX doc"
   VERBATIM)

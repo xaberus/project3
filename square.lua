@@ -18,15 +18,15 @@ config = {
     if 0 < x and x < L then return 0 else return 10000 end
   end;
   psi = function(x)
-    --return exp(-(x-L/2)^2/(2)) * cexp({0, 4 * x})
-    if 0 < x and x < L then
-      return {
-        sqrt(2/L) * sin(1*pi/L * x) + sqrt(2/L) * sin(2*pi/L * x),
-        0
-      }
-    else
-      return  {0,0}
-    end
+    return exp(-(x-L/2)^2/(2)) * cexp({0, 4 * x})
+    --if 0 < x and x < L then
+    --  return {
+    --    sqrt(2/L) * sin(1*pi/L * x) + sqrt(2/L) * sin(2*pi/L * x),
+    --    0
+    --  }
+    --else
+    --  return  {0,0}
+    --end
   end;
   energy = function(k)
     return pi^2 * k^2/L^2
