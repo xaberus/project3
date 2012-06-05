@@ -19,6 +19,7 @@
 #include "cvect.h"
 #include "array.h"
 #include "carray.h"
+#include "peaks.h"
 
 #include "simulation.h"
 
@@ -221,6 +222,9 @@ int preferences_read(lua_State * L, preferences_t * prefs)
     lua_getfield(L, tab, "theoenrg");
     if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.theoenrg undefined\n"); return -1; }
     prefs->output.theoenrg = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
+    lua_getfield(L, tab, "spectrum");
+    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.spectrum undefined\n"); return -1; }
+    prefs->output.spectrum = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
     lua_pop(L, 1);
   }
   printf("  output:\n");
@@ -262,6 +266,9 @@ int preferences_read(lua_State * L, preferences_t * prefs)
       lua_rawgeti(L, range, 2);
       if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, enrgrange.max undefined\n"); return -1; }
       prefs->enrgrange.max = lua_tonumber(L, -1); lua_pop(L, 1);
+      lua_rawgeti(L, range, 3);
+      if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, enrgrange.win undefined\n"); return -1; }
+      prefs->enrgrange.win = lua_tonumber(L, -1); lua_pop(L, 1);
     } else {
       prefs->enrgrange.min = 0;
       prefs->enrgrange.max = maxE;
@@ -339,7 +346,7 @@ int start_simulation(preferences_t * prefs)
   int steps= prefs->steps;
   int length = runs + 1;
 
-  // allocate an array for the corraltion function and specturm and the fftw plan
+  // allocate an array for the corraltion function and spectrum and the fftw plan
   carray_t * c = carray_new_sized(0, length);
   carray_t * co = carray_new_sized(0, length);
   carray_t * ck = carray_new_sized(0, length);
@@ -494,7 +501,7 @@ int dump_results(preferences_t * prefs)
     fclose(fp);
   }
 
-  // dump the spectrum
+  // dump the DTF of corr
   {
     int len = strlen(prefs->output.dir) + strlen(prefs->output.dftcorr) + 10;
     char path[len];
@@ -518,6 +525,30 @@ int dump_results(preferences_t * prefs)
       fprintf(fp, "%d %.17e\n", k, E->data[k]);
     }
     fclose(fp);
+  }
+
+  // dump spectrum
+  {
+    int len = strlen(prefs->output.dir) + strlen(prefs->output.theoenrg) + 10;
+    char path[len];
+    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.spectrum);
+    FILE * fp = fopen(path, "w"); assert(fp);
+
+    array_t * data = array_new(ck->length);
+    for (int k = 0; k < ck->length; k++) {
+      data->data[k] = cabs(ck->data[k]);
+    }
+    array_t * peaks = peaks_find(data, 6);
+
+    for (int k = 0; k < peaks->length; k++) {
+      int i = peaks->data[k];
+      if (i > 0 && i < data->length) {
+        fprintf(fp, "%d %.17e\n", i, data->data[i]);
+      }
+    }
+    fclose(fp);
+    free(peaks);
+    free(data);
   }
 
   // dump variables for gnuplot

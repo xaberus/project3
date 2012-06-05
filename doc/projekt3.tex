@@ -17,17 +17,17 @@
 
 \usepackage{listings}
 \usepackage{color}
- 
+
 \definecolor{dkgreen}{rgb}{0,0.6,0}
 \definecolor{gray}{rgb}{0.5,0.5,0.5}
 \definecolor{mauve}{rgb}{0.58,0,0.82}
- 
+
 \lstset{ %
   language=Lua,                % the language of the code
   basicstyle=\tiny,           % the size of the fonts that are used for the code
   %numbers=left,                   % where to put the line-numbers
   numberstyle=\tiny\color{gray},  % the style that is used for the line-numbers
-  stepnumber=2,                   % the step between two line-numbers. If it's 1, each line 
+  stepnumber=2,                   % the step between two line-numbers. If it's 1, each line
                                   % will be numbered
   numbersep=5pt,                  % how far the line-numbers are from the code
   backgroundcolor=\color{white},      % choose the background color. You must add \usepackage{color}
@@ -76,12 +76,12 @@
 		Damit erhält man eine einfache Form, der linearen DGL:
 
 		\begin{align*}
-				&\left(-\frac{\partial^2}{\partial x^2} + V(x,t)\right)\psi(x,t) 
+				&\left(-\frac{\partial^2}{\partial x^2} + V(x,t)\right)\psi(x,t)
 					= i \frac{\partial}{\partial t}\psi(x,t) \\
 				&= \left(T + V\right)\psi(x,t)
 					= i \frac{\partial}{\partial t}\psi(x,t)
 		\end{align*}
-		
+
 		Mit dem üblichen Ansatz für die zeitliche Evaluation von $ \psi(x,t)=U(t)\psi(x) $
 		(mit fixierter Wellenfunktion $\psi(x)$ und unitärem Zeit-Propagator $U(t)$)
 		erhält man	die äquivalente Schrödingergleichung des Propagators:
@@ -92,7 +92,7 @@
 		weniger allgemein für verschiedene Zeiten mit sich selbst kommutierenden
 		Hammiltonian $H(t)=T+V(t)$, $[H(t),H(t')]=0$ ist:
 		\begin{equation*}
-			U(t)=\exp\left(\int_{0}^{t}{-i (T+V(t')) \mathrm{d} t'}\right)		
+			U(t)=\exp\left(\int_{0}^{t}{-i (T+V(t')) \mathrm{d} t'}\right)
 		\end{equation*}
 		Falls sich das Potential für kleine Zetdiffrenzen $\tau$ nur geringfügig ändert oder
 		sogar stets konstant ist, sodass $[H(t),H(t+\tau)]\approx 0$ gilt, geht diese Lösung
@@ -106,23 +106,23 @@
 			U(\tau)=\mathrm{e}^{-i \tau (T+V)}
 		\end{equation}
 		Da $T$ nur im Impulsraum und $V$ nur im Ortsraum wirken, wäre es günstig sie
-		nur dort auszuwerten, weil sie dann als Multiplikationsopretoren diagonal 
+		nur dort auszuwerten, weil sie dann als Multiplikationsopretoren diagonal
 		wären und	das Exponential sich leicht auswerten ließe. Da jedoch für die
 		meisten interessanten Probleme $T$ und $V$ nicht Kommutieren, $[T,V]\neq 0$,
-		muss man hier geschickt	Approxomieren. 
-		
+		muss man hier geschickt	Approxomieren.
+
 		Für jeden Operator gilt zunächst:
 		\begin{equation*}
 			\mathrm{e}^{- i \tau X}
 				= \sum_{n=0}^{\infty} \frac{(i \tau X)^n}{n!}
 				= 1 - i \tau X - \tau^2 \frac{X^2}{2} + O(\tau^3)
 		\end{equation*}
-		
+
 		Mit den Bezeichnung	$U_X(\tau)=\mathrm{e}^{-i \tau X}$ ergibt das dann:
 		\begin{align*}
 			U_{X+Y}(\tau) &= 1 - i \tau (X+Y) -\tau^2 \frac{(X+Y)^2}{2} + O(\tau^3)\\
-							&= 1 - i \tau X - i \tau Y\\ 
-							&\quad-\frac{\tau^2}{2} \left(	X^2 + X Y + Y X + Y^2 \right) 
+							&= 1 - i \tau X - i \tau Y\\
+							&\quad-\frac{\tau^2}{2} \left(	X^2 + X Y + Y X + Y^2 \right)
 							+ O(\tau^3)\\
 		\end{align*}
 		\begin{equation*}
@@ -132,17 +132,17 @@
 			U_Y(\tau) = 1 - i \tau Y -\tau^2 \frac{Y^2}{2} + O(\tau^3)
 		\end{equation*}
 		\begin{multline*}
-			U_X(\tau) U_Y(\tau) = 
+			U_X(\tau) U_Y(\tau) =
 				1
 				- i \tau Y - i \tau X\\
-				- \tau^2 X Y 
+				- \tau^2 X Y
 				- \tau^2 \frac{Y^2}{2}
 				- \tau^2 \frac{X^2}{2}
 				+ O(\tau^3)
 		\end{multline*}
 		Damit erhält man den Ausdruck:
 		\begin{equation}\label{eq:expand}
-			U_{X+Y}(\tau) = U_X(\tau)U_Y(\tau) 
+			U_{X+Y}(\tau) = U_X(\tau)U_Y(\tau)
 				+ \frac{\tau^2}{2} \left[X,Y\right]	+ O(\tau^3)\\
 		\end{equation}
 		Mit $X=\frac{V}{2}$, $Y=T+\frac{V}{2}$ folgt:
@@ -150,7 +150,7 @@
 			U_{\frac{V}{2}+T+\frac{V}{2}}(\tau)
 				= U_{\frac{V}{2}}(\tau)U_{T+\frac{V}{2}}(\tau) \\
 					+ \left[\frac{V}{2},T+\frac{V}{2}\right]	+ O(\tau^3)\\
-				= U_{\frac{V}{2}}(\tau)U_{T+\frac{V}{2}}(\tau) 
+				= U_{\frac{V}{2}}(\tau)U_{T+\frac{V}{2}}(\tau)
 					+ \left[\frac{V}{2},T\right]	+ O(\tau^3)\\
 				= U_{\frac{V}{2}}(\tau)
 						\left(
@@ -162,9 +162,9 @@
 		\end{multline}
 		Durch die symmterische Aufteilung des Potentials verringert sich also
 		der Fehler auf die 3. Ordnung.
-		
+
 		In dieser Darstellung ist jetzt einfach die Wirkung von
-		$U \approx \tilde{U}=U_{\frac{V}{2}}(\tau) U_T(\tau) U_{\frac{V}{2}}(\tau)$ 
+		$U \approx \tilde{U}=U_{\frac{V}{2}}(\tau) U_T(\tau) U_{\frac{V}{2}}(\tau)$
 		zu berechnen,	denn:
 		\begin{align}
 		\label{it:hV}
@@ -173,10 +173,10 @@
 			U_T(\tau) \psi(x) &= \mathcal{F}^{-1} \mathrm{e}^{-i \tau k^2} \mathcal{F} \psi(x)
 		\end{align}
 		wobei $\mathcal{F}$ die Fouriertransformation ist.
-		
+
 		Diese beiden Gleichungen definieren die Iteration der Split-Operator-Methode
 		für $n$ Schtitte bzw. Zeit $t=n \tau$
-		
+
 		\begin{description}
 			\item[Start]
 				\begin{itemize}
@@ -201,20 +201,20 @@
 		wobei die Iteration $(n-1)$ Mal ausgeführt wird. Die zwei nacheinander folgenden
 		Propagationen mit $U_{\frac{V}{2}}(\tau)$ werden in der Implementierung natürlich
 		zu $U_V(\tau)$ zusammengefasst.
-		
+
 		\textbf{Bemerkung:} Es hindert einen niemend daran die Rollen von T und V zu
-		vertauschen	und statt $\tilde{U}$ den Operator 
+		vertauschen	und statt $\tilde{U}$ den Operator
 		$U_{\frac{T}{2}}(\tau) U_V(\tau) U_{\frac{T}{2}}(\tau)$ zu verwenden. Der einzige
-		Unterschied ist eine zurätliche Fouriertransformation am Anfang und eine 
-		inverse Fouriertransformation am Ende des Algorithmus, die mir angesichts der 
+		Unterschied ist eine zurätliche Fouriertransformation am Anfang und eine
+		inverse Fouriertransformation am Ende des Algorithmus, die mir angesichts der
 		eher kurzen Iterationen für dieses Projekt unangebracht erschienen.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		
+
   \section{Autokorrelationsfunktion}
-		Ein zeitunabhängiger Hamiltonian $H$ eines Systems besitzt eine Basis in der er als 
+		Ein zeitunabhängiger Hamiltonian $H$ eines Systems besitzt eine Basis in der er als
 		Multiplikationsoperator wirkt. In dieser Basis besitzt $H$ eine Spektralzerlegung
-		der Form 
+		der Form
 		\begin{equation*}
 			H = \int_{\sigma(H)}{\epsilon \mathrm{d}\mu(\epsilon)}
 		\end{equation*}
@@ -244,27 +244,27 @@
 					 			\mathrm{e}^{-i t \epsilon}
 					 			\mathrm{d} \tilde{\mu}(\epsilon)}
 		\end{multline}
-		
+
 		Die inverse Fouriertransformation von $c(t)$ gibt ein moduliertes Spektrum
 		der Energieeigenwerte von H.
-		
+
 		\begin{multline}
 			\label{eq:corrft}
-			c(\epsilon) = \mathcal{F}[c](\epsilon) 
+			c(\epsilon) = \mathcal{F}[c](\epsilon)
 			      = \frac{1}{\sqrt{2 \pi}}
 			     		\int_{\mathbb{R}} c(t) \mathrm{e}^{it \epsilon} \mathrm{d}t\\
 			     = \frac{1}{\sqrt{2 \pi}}
 		     			\int_{\sigma(H)}
 				     		\int_{\mathbb{R}} \mathrm{e}^{i t (\epsilon -\epsilon')}	\mathrm{d}t
 					 		\mathrm{d} \tilde{\mu}(\epsilon')\\
-			     = \sqrt{2 \pi}	
+			     = \sqrt{2 \pi}
 			     		\int_{\sigma(H)} \delta(\epsilon -\epsilon')
 					 		\mathrm{d} \tilde{\mu}(\epsilon')
 		\end{multline}
-		
+
 		Um die Bedeutung von $c(\epsilon)$ besser zu verstehen, betrachte man einen
 		etwas weniger allgemeinen Fall eines Systems mit isolierten Eigenwerten
-		($H$ kompakt und normal da selbtstadjungiert). In einer Basis in der 
+		($H$ kompakt und normal da selbtstadjungiert). In einer Basis in der
 		dieser Hamiltonian diagonal ist hat jeder Zustand zie Zerlegung
 		$\psi=\sum_{j}{a_j e_j}$ mit Eigenfunktionen $e_j$ zu Eigenenergie $\epsilon_j$.
 		Die Autokorrelation ist nach \eqref{eq:corr}
@@ -277,7 +277,7 @@
 		Die $\delta$-Distribution in der letzten Formel kommt natürlich nur dann zustande,
 		wen über ganz $\mathbb{R}$ integriert wird. Für alle praktischen Zwecke steht
 		aber nur ein begrenztes Intervall $I=[0:T]$ zur Verfügung. Statt des echten
-		Spektrums	bekommt man nach nur die Faltung von $c(\epsilon)$ mit 
+		Spektrums	bekommt man nach nur die Faltung von $c(\epsilon)$ mit
 		$\mathcal{F}[w](\epsilon)$,
 		wobei $w(t)$ die Rechteck-Fensterfunktion mit Träger in I ist. Nach Faltungstheorem
 		erhält man:
@@ -287,7 +287,7 @@
 				= \int_{\mathbb{R}}
 					 	\int_{\mathbb{R}}
 					 		 c(t) w(t') \delta(t-t') \frac{2 \pi}{(\sqrt{2 \pi})^2}
-					 		 	 \mathrm{e}^{i t \epsilon} 
+					 		 	 \mathrm{e}^{i t \epsilon}
 						\mathrm{d}t
 					\mathrm{d}t'\\
 				= \frac{1}{(\sqrt{2 \pi})^2} \int_{\mathbb{R}}
@@ -295,18 +295,18 @@
 					 		 c(t) w(t')
 					 		   \int_{\sigma(H)} \mathrm{e}^{i (t - t')\epsilon'}
 					 		   \mathrm{d}\mu(\epsilon')
-					 		 	 \mathrm{e}^{i t \epsilon} 
+					 		 	 \mathrm{e}^{i t \epsilon}
 						\mathrm{d}t
 					\mathrm{d}t'\\
-				= 
- 		  	\int_{\sigma(H)} 
+				=
+ 		  	\int_{\sigma(H)}
 					\left(\int_{\mathbb{R}}
 						 \frac{c(t)}{\sqrt{2 \pi}} \mathrm{e}^{i t\epsilon'} \mathrm{d}t\right)
-					\left(\int_{\mathbb{R}} 
+					\left(\int_{\mathbb{R}}
 						\frac{w(t')}{\sqrt{2 \pi}}  \mathrm{e}^{i t' (\epsilon-\epsilon')}
 							\mathrm{d}t'\right)
 				\mathrm{d}\mu(\epsilon')\\
-				= \int_{\sigma(H)} 
+				= \int_{\sigma(H)}
 	 		  		\mathcal{F}[c](\epsilon') \mathcal{F}[w](\epsilon-\epsilon')
 					\mathrm{d}\mu(\epsilon')\\
 				= (\mathcal{F}[c] * \mathcal{F}[w])(\epsilon)
@@ -314,7 +314,7 @@
 
 		Für $w(t)=\Theta(t)\Theta(T-t)$ erhält man
 		\begin{equation*}
-			W(\epsilon) =\mathcal{F}[w](\epsilon) = 
+			W(\epsilon) =\mathcal{F}[w](\epsilon) =
 				\frac{1}{\sqrt{2\pi}}\int_{0}^{T}	\mathrm{e}^{i t\epsilon} \mathrm{d}t
 			= -i \frac{\mathrm{e}^{i T E}-1}{\sqrt{2\pi} E}
 		\end{equation*}
@@ -325,13 +325,13 @@
 		Das Rechteck-Fenster verschmiert also nebeneinander  liegende Peaks und verringert
 		die Auflösung des Verfahrens. Man kann das umgehen, indem man eine andere
 		Fenster-Funktion verwendet. Für dieses Projekt wurde die übliche
-		von-Hann Funktion  
+		von-Hann Funktion
 		\begin{equation}
 		\label{eq:hann}
 			w(t) = \left\{\begin{array}{cl}
 				\frac{1-\cos(\frac{2\pi t}{T})}{2}, & t \in I=[0:T]\\
-				0,                        & \mbox{sonst} 
-				\end{array}\right. 
+				0,                        & \mbox{sonst}
+				\end{array}\right.
 		\end{equation}
 		verwendet.
 
@@ -344,15 +344,15 @@
 		sinnvoll implementierbar. Deswegen diskretisiert man bei Simulationen
 		normalerweise den Ort (und Zeit) und geht von kontinuierlichen zu diskreten
 		Fouriertransformationen über.
-		
+
 		Sei $x(t)$ ein zunächst kontinuierliches Signal. Durch Festlegen eines
 		Samplingabstands $\tau$ erhält man den Dirac-Kamm $s(t)=\delta(t-m \tau)$.
 		Ein diskretisiertes Signal ist dann das punktweise Produkt von $s(t)$ und $x(t)$.
 		Unter des Annahme, dass $x(t)$ periodisch ist mit $x(t)=x(t+n\tau)$ erhält
 		man für die für die Fouriertransformierte dann:
-		
+
 		\begin{multline*}
-			\mathcal{F}[x s](\epsilon) 
+			\mathcal{F}[x s](\epsilon)
 				= \frac{1}{\sqrt{2 \pi}}\int_{\mathbb{R}}{
 					 \sum_{m=-\infty}^{\infty} x(t)\delta(t-m\tau)
 						 \mathrm{e}^{- i t \epsilon}
@@ -372,7 +372,7 @@
 				  	\right)
 				  \right)
 		\end{multline*}
-		
+
 		Die Transformierte eines periodischen diskreten Signals ist also selbst
 		von der gleichen Form. Insbesondere folgt aus der letzen Gleichung, dass
 		\begin{equation}
@@ -384,22 +384,22 @@
 		\begin{multline}
 		\label{eq:dft}
 			\hat{x}_\alpha
-			= \tilde{\mathcal{F}}[x]_\alpha 
+			= \tilde{\mathcal{F}}[x]_\alpha
 			= N \sum_{m=0}^{n-1} x_m \mathrm{e}^{- i m \tau \epsilon_\alpha}\\
 			= N \sum_{m=0}^{n-1} x_m \mathrm{e}^{- i m \tau  \frac{2\pi}{n\tau} \alpha}
 			= N \sum_{m=0}^{n-1} x_m \mathrm{e}^{- i 2\pi \frac{m}{n} \alpha}
 		\end{multline}
-		
+
 		Bemerkenswert ist, dass die Gleichung \eqref{eq:dft} in keinerlei Weise
 		mehr von dem Samplingabstand abhängt, woraus sich die Universalität
 		dieser Transformation ergibt. Die anfangs benutze Voraussetzung der
 		Periodizität des Signals ist also für jede Funktion auf einem endlichen
 		Intervall erfüllbar: man setzt die Funktion einfach periodisch fort.
-		
+
 		Andereseits muss man bei der Simulation aufpassen, dass des Samplingbereich
 		groß genug gewählt wird, damit die Simulation nie an den Rand des Intervalls
 		kommen kann, was meist unerwünschte Effekte der Periodizität zur Folge hätte.
-		
+
 		Die Inverse der DFT berechnet muss bis auf einen Normierungsfaktor die gleiche
 		Gestalt haben:
 		\begin{equation}
@@ -408,16 +408,16 @@
 			= \tilde{\mathcal{F}^{-1}}[\hat{x}]_k
 			= N \sum_{\alpha=0}^{n-1} \hat{x}_\alpha \mathrm{e}^{+ i 2\pi \frac{\alpha}{n} k}
 		\end{equation}
-		
+
 		Durch Einsetzen bekommt man dann direkt:
 		\begin{multline*}
 			\tilde{\mathcal{F}^{-1}}[\tilde{\mathcal{F}}[x]]_k
-			= N^2 \sum_{\alpha=0}^{n-1} 
+			= N^2 \sum_{\alpha=0}^{n-1}
 				\sum_{m=0}^{n-1} x_m \mathrm{e}^{- i 2\pi \frac{m}{n} \alpha}
 		 	\mathrm{e}^{+ i 2\pi \frac{\alpha}{n} k} \\
-		 	= N^2 \sum_{m=0}^{n-1} x_m 
+		 	= N^2 \sum_{m=0}^{n-1} x_m
 		 	  \sum_{\alpha=0}^{n-1}	\mathrm{e}^{i 2\pi \frac{\alpha}{n}(k-m)}\\
-		 	= N^2 \sum_{m=0}^{n-1} x_m 
+		 	= N^2 \sum_{m=0}^{n-1} x_m
 		 	  n \delta^m_k
 		 	= N^2 n x_k \Rightarrow N := \frac{1}{\sqrt{n}}
 		\end{multline*}
@@ -426,17 +426,17 @@
   \section{Betrachtung einiger Potentiale}
   	\subsection{Asymetrischer Doppeltopf}
 			\includegraphics[scale=.62]{../simple/init}
-  		Das erste Potential ist ein einfaches Polynom 4. Ordnung, wobei die 
+  		Das erste Potential ist ein einfaches Polynom 4. Ordnung, wobei die
   		Koeffizienten willkürlich gewählt wurden.
-  		\small{\begin{tabular}{|c|c|c|c|c|c|} \hline 
+  		\small{\begin{tabular}{|c|c|c|c|c|c|} \hline
 				\multirow{2}{*}{Potential}  &
-					\multicolumn{5}{|c|}{$V(x)= k_0 - k_2 x^2 + k_3 x^3 + k_4 x^4$} \\ 
-				& 
-					\multicolumn{5}{|c|}{$k_0 = -100, k_2=40, k_3=0.5, k_4=1$} \\ \hline 
+					\multicolumn{5}{|c|}{$V(x)= k_0 - k_2 x^2 + k_3 x^3 + k_4 x^4$} \\
+				&
+					\multicolumn{5}{|c|}{$k_0 = -100, k_2=40, k_3=0.5, k_4=1$} \\ \hline
 				\multirow{2}{*}{Parameter}
 				& bins   & range      & steps   & runs  & dt \\
-				          & $8192$ & ${[-8:8]}$ & $10$    & $50k$ & $0.00001$ \\ \hline 
-				Start- & 
+				          & $8192$ & ${[-8:8]}$ & $10$    & $50k$ & $0.00001$ \\ \hline
+				Start- &
 					\multicolumn{5}{|c|}{
 						$
 							\psi(x) = -i \mathrm{e}^{\frac{(x-a)^2}{2\sigma^2}}
@@ -458,16 +458,16 @@
 			\lstinputlisting[language=Lua]{../simple.lua}
   	\subsection{Potentialkasten}
 			\includegraphics[scale=.62]{../square/init}
-			Als nächstes versuche ich bekannte Erbgebnisse für einen 
+			Als nächstes versuche ich bekannte Erbgebnisse für einen
 			uendlich tiefen Potentialkasten näherungsweise zu reproduzieren.
-  		\small{\begin{tabular}{|c|c|c|c|c|c|} \hline 
+  		\small{\begin{tabular}{|c|c|c|c|c|c|} \hline
 				\multirow{2}{*}{Potential}  &
-					\multicolumn{5}{|c|}{$V(x)= a \left(\Theta(-L/2-x)+\Theta(-L/2+x)\right)$} \\ 
-				& \multicolumn{5}{|c|}{$a=10000, L=10$} \\ \hline 
+					\multicolumn{5}{|c|}{$V(x)= a \left(\Theta(-L/2-x)+\Theta(-L/2+x)\right)$} \\
+				& \multicolumn{5}{|c|}{$a=10000, L=10$} \\ \hline
 				\multirow{2}{*}{Parameter}
 				& bins   & range      & steps   & runs  & dt \\
-				          & $8192$ & ${[-8:8]}$ & $10$    & $50k$ & $0.00001$ \\ \hline 
-				Start- & 
+				          & $8192$ & ${[-8:8]}$ & $10$    & $50k$ & $0.00001$ \\ \hline
+				Start- &
 					\multicolumn{5}{|c|}{\multirow{2}{*}{
 						$
 							\psi(x) = \mathrm{e}^{-\frac{x^2}{2}} \mathrm{e}^{i 4 x}
@@ -483,7 +483,7 @@
 			\includegraphics[scale=.62]{../harmosca/corr}
 			\includegraphics[scale=.62]{../harmosca/spektrum}
 			\lstinputlisting[language=Lua]{../harmosca.lua}
-  	\subsection{Harmonischer Oszillator: Moden}			
+  	\subsection{Harmonischer Oszillator: Moden}
 			\includegraphics[scale=.62]{../harmosc1/init}
 			\includegraphics[scale=.62]{../harmosc1/corr}
 			\includegraphics[scale=.62]{../harmosc1/spektrum}
@@ -506,7 +506,7 @@
 			\newblock{\em{Continuous and Discrete Time Signals and Systems}}
 			\newblock{Kap.12.1}
 			\newblock{\url{
-				http://www.cambridge.org/resources/		
+				http://www.cambridge.org/resources/
 				0521854555/4421_Chapter\%2012\%20-\%20Discrete\%20Fourier\%20transform.pdf}}
 	\end{thebibliography}
 \end{document}

@@ -37,8 +37,9 @@ typedef struct preferences {
     char * apsi;        /**< filename for initial system state sump */
     char * pot;         /**< filename for potential dump */
     char * corr;        /**< filename for autorcorrelation function dump */
-    char * dftcorr;     /**< filename for spectrum dump */
+    char * dftcorr;     /**< filename for dump DTF of corr */
     char * theoenrg;    /**< filename to dump theoretical energies to */
+    char * spectrum;    /**< filename to dump spectrum to */
   } output;             /**< output configuration */
 
   int        tsteps;    /**< total number of iterations */
@@ -49,6 +50,7 @@ typedef struct preferences {
   struct {
     double min;         /**< minimal energy to consider */
     double max;         /**< maximal energy to consider */
+    double win;         /**< maximal energy to consider */
   } enrgrange;          /**< hints for gnuplot */
 
   array_t  * theoenrg;  /**< theoretical energies from config */

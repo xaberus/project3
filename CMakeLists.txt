@@ -73,6 +73,7 @@ add_executable(projekt3
   ${projekt_SOURCE_DIR}/splitop.c
   ${projekt_SOURCE_DIR}/carray.c
   ${projekt_SOURCE_DIR}/array.c
+  ${projekt_SOURCE_DIR}/peaks.c
 )
 set_target_properties(projekt3 PROPERTIES COMPILE_FLAGS ${CFLAGS})
 set_target_properties(projekt3 PROPERTIES LINK_FLAGS ${LFLAGS})
