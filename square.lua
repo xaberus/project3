@@ -31,7 +31,7 @@ config = {
   energy = function(k)
     return pi^2 * k^2/L^2
   end;
-  enrgrange = {0, 55};
+  enrgrange = {0, 55, 6};
   output = {
     dir = "./square";
     apsi = "apsi.dat";
@@ -39,5 +39,6 @@ config = {
     corr = "corr.dat";
     dftcorr = "dftcorr.dat";
     theoenrg = "theoenrg.dat";
+    spectrum = "spectrum.dat";
   };
 }

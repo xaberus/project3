@@ -24,7 +24,7 @@ config = {
   energy = function(k)
     return omega * (.5 + k)
   end;
-  enrgrange = {0, 2*omega};
+  enrgrange = {0, 2*omega, 6};
   output = {
     dir = "./harmosc1";
     apsi = "apsi.dat";
@@ -32,5 +32,6 @@ config = {
     corr = "corr.dat";
     dftcorr = "dftcorr.dat";
     theoenrg = "theoenrg.dat";
+    spectrum = "spectrum.dat";
   };
 }

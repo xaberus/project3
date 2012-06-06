@@ -471,7 +471,7 @@ int dump_results(preferences_t * prefs)
     FILE * fp = fopen(path, "w"); assert(fp);
     for (int k = 0; k < apsi->length; k++) {
       complex double z = apsi->data[k];
-      fprintf(fp, "%.17e %.17e %.17e %.17e\n", xpos->data[k], creal(z), cimag(z), cabs(z));
+      fprintf(fp, "%.17e;%.17e;%.17e;%.17e\n", xpos->data[k], creal(z), cimag(z), cabs(z));
     }
     fclose(fp);
   }
@@ -483,7 +483,7 @@ int dump_results(preferences_t * prefs)
     snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.pot);
     FILE * fp = fopen(path, "w"); assert(fp);
     for (int k = 0; k < apsi->length; k++) {
-      fprintf(fp, "%.17e %.17e\n", xpos->data[k], pot->data[k]);
+      fprintf(fp, "%.17e;%.17e\n", xpos->data[k], pot->data[k]);
     }
     fclose(fp);
   }
@@ -496,7 +496,7 @@ int dump_results(preferences_t * prefs)
     FILE * fp = fopen(path, "w"); assert(fp);
     for (int k = 0; k < c->length; k++) {
       complex double z = c->data[k];
-      fprintf(fp, "%.17e %.17e %.17e %.17e\n", k * steps * dt, creal(z), cimag(z), cabs(z));
+      fprintf(fp, "%.17e;%.17e;%.17e;%.17e\n", k * steps * dt, creal(z), cimag(z), cabs(z));
     }
     fclose(fp);
   }
@@ -507,9 +507,19 @@ int dump_results(preferences_t * prefs)
     char path[len];
     snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.dftcorr);
     FILE * fp = fopen(path, "w"); assert(fp);
-    for (int k = 0; k < ck->length; k++) {
+    /*for (int k = 0; k < ck->length; k++) {
       complex double z = ck->data[k];
-      fprintf(fp, "%.17e %.17e %.17e %.17e\n", k * dE, creal(z), cimag(z), cabs(z));
+      fprintf(fp, "%.17e;%.17e;%.17e;%.17e\n", k * dE, creal(z), cimag(z), cabs(z));
+    }*/
+    for (int k = ck->length/2; k < ck->length; k++) {
+      double x = (k - ck->length) * dE;
+      complex double z = ck->data[k];
+      fprintf(fp, "%.17e;%.17e;%.17e;%.17e\n", x, creal(z), cimag(z), cabs(z));
+    }
+    for (int k = 0; k < ck->length/2; k++) {
+      double x = k * dE;
+      complex double z = ck->data[k];
+      fprintf(fp, "%.17e;%.17e;%.17e;%.17e\n", x, creal(z), cimag(z), cabs(z));
     }
     fclose(fp);
   }
@@ -522,7 +532,7 @@ int dump_results(preferences_t * prefs)
     snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.theoenrg);
     FILE * fp = fopen(path, "w"); assert(fp);
     for (int k = 0; k < E->length; k++) {
-      fprintf(fp, "%d %.17e\n", k, E->data[k]);
+      fprintf(fp, "%d;%.17e\n", k, E->data[k]);
     }
     fclose(fp);
   }
@@ -543,7 +553,17 @@ int dump_results(preferences_t * prefs)
     for (int k = 0; k < peaks->length; k++) {
       int i = peaks->data[k];
       if (i > 0 && i < data->length) {
-        fprintf(fp, "%d %.17e\n", i, data->data[i]);
+        if (i >= ck->length/2 && i < ck->length) {
+          fprintf(fp, "%.17e;%.17e\n", (i - ck->length) * dE, data->data[i]);
+        }
+      }
+    }
+    for (int k = 0; k < peaks->length; k++) {
+      int i = peaks->data[k];
+      if (i > 0 && i < data->length) {
+        if (i < ck->length/2) {
+          fprintf(fp, "%.17e;%.17e\n", i * dE, data->data[i]);
+        }
       }
     }
     fclose(fp);

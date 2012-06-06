@@ -1,4 +1,3 @@
-
 bins=`cut -d: -f 1 stats`
 dt=`cut -d: -f 2 stats`
 rangemin=`cut -d: -f 3 stats`
@@ -39,6 +38,8 @@ set tics out
 
 set autoscale  y
 set autoscale y2
+
+set datafile separator ";"
 
 plot \
   "pot.dat" axis x1y1 with lines linestyle 3, \

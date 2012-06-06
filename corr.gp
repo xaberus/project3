@@ -1,4 +1,3 @@
-
 bins=`cut -d: -f 1 stats`
 dt=`cut -d: -f 2 stats`
 rangemin=`cut -d: -f 3 stats`
@@ -25,6 +24,8 @@ set key center top title " "
 set xrange [0 : dt*steps*runs/5]
 
 set xlabel "Zeit"
+
+set datafile separator ";"
 
 plot \
   "corr.dat" axis x1y1 with lines linestyle 3 title "c(t)"
