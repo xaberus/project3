@@ -25,7 +25,7 @@ set xrange [0 : dt*steps*runs/5]
 
 set xlabel "Zeit"
 
-set datafile separator ";"
+#set datafile separator ";"
 
 plot \
   "corr.dat" axis x1y1 with lines linestyle 3 title "c(t)"

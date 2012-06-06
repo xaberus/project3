@@ -39,7 +39,7 @@ set tics out
 set autoscale  y
 set autoscale y2
 
-set datafile separator ";"
+#set datafile separator ";"
 
 plot \
   "pot.dat" axis x1y1 with lines linestyle 3, \

@@ -41,7 +41,7 @@ set y2range [-10 : 10]
 set autoscale  y
 #set autoscale y2
 
-set datafile separator ";"
+#set datafile separator ";"
 
 plot \
   "dftcorr.dat" using 1:4 axis x1y1 with lines linestyle 3 title "|F[c(t)](eps)|", \
