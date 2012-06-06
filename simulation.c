@@ -292,6 +292,13 @@ int preferences_read(lua_State * L, preferences_t * prefs)
       lua_rawgeti(L, range, 3);
       if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, enrgrange.win undefined\n"); return -1; }
       prefs->enrgrange.win = lua_tonumber(L, -1); lua_pop(L, 1);
+      lua_rawgeti(L, range, 4);
+      if (!lua_isnil(L, -1)) {
+        prefs->enrgrange.sel = lua_tonumber(L, -1);
+      } else {
+        prefs->enrgrange.sel = 1.9;
+      }
+      lua_pop(L, 1);
     } else {
       prefs->enrgrange.min = 0;
       prefs->enrgrange.max = maxE;
@@ -299,6 +306,8 @@ int preferences_read(lua_State * L, preferences_t * prefs)
     lua_pop(L, 1);
   }
   printf("  enrgrange [%g;%g]\n", prefs->enrgrange.min, prefs->enrgrange.max);
+  printf("  peak search window is %g\n", prefs->enrgrange.win);
+  printf("  peak selector is %g sdev\n", prefs->enrgrange.sel);
 
   // get at most 1000 theoretical energy values for spectrum plot
   {
@@ -567,13 +576,20 @@ int dump_results(preferences_t * prefs)
     snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.spectrum);
     FILE * fp = fopen(path, "w"); assert(fp);
 
-    array_t * data = array_new(ck->length);
+    /*array_t * data = array_new(ck->length);
     for (int k = 0; k < ck->length; k++) {
       data->data[k] = cabs(ck->data[k]);
+    }*/
+    array_t * data = array_new_sized(0, ck->length);
+    for (int k = ck->length/2; k < ck->length; k++) {
+      data = array_append(data, cabs(ck->data[k]));
     }
-    array_t * peaks = peaks_find(data, 6);
+    for (int k = 0; k < ck->length/2; k++) {
+      data = array_append(data, cabs(ck->data[k]));
+    }
+    array_t * peaks = peaks_find(data, 6, prefs->enrgrange.sel);
 
-    for (int k = 0; k < peaks->length; k++) {
+    /*for (int k = 0; k < peaks->length; k++) {
       int i = peaks->data[k];
       if (i > 0 && i < data->length) {
         if (i >= ck->length/2 && i < ck->length) {
@@ -588,7 +604,15 @@ int dump_results(preferences_t * prefs)
           fprintf(fp, "%.17e %.17e\n", i * dE, data->data[i]);
         }
       }
+    }*/
+
+    for (int k = 0; k < peaks->length; k++) {
+      int i = peaks->data[k];
+      if (i > 0 && i < data->length) {
+        fprintf(fp, "%.17e %.17e\n", (i - ck->length/2.0) * dE, data->data[i]);
+      }
     }
+
     fclose(fp);
     free(peaks);
     free(data);

@@ -24,7 +24,7 @@ config = {
   energy = function(k)
     return omega * (.5 + k)
   end;
-  enrgrange = {0, 200, 6};
+  enrgrange = {0, 200, 6, 1.1};
   output = {
     dir = "./harmosca";
     apsi = "apsi.dat";

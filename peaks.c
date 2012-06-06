@@ -52,68 +52,6 @@ double vec_deviation(int length, double * a, double ref)
   return sqrt(var);
 }
 
-inline static
-void peek_data(int l, double d[l], int i, int k, int w, double * N1, double * N2)
-{
-  int n = i - k;
-  int m = i + k;
-
-  int is, ie;
-
-  if (n < 0) { is = 0; } else { is = n; }
-  if (m >= l) { ie = l - 1; } else { ie = m; }
-
-  for (int p = n, s = 0, ss = 0; p <= m + w; p++) {
-    if (p < is) {
-      if (p != i) {
-        N1[s++] = d[is]/fabs(p-i);
-      }
-      N2[ss++] = d[is]/fabs(p-i);
-    }
-    else if (p > ie) {
-      if (p != i) {
-        N1[s++] = d[ie]/fabs(p-i);
-      }
-      N2[ss++] = d[ie]/fabs(p-i);
-    } else {
-      if (p != i) {
-        N1[s++] = d[p];
-      }
-      N2[ss++] = d[p];
-    }
-  }
-}
-
-double kernel(double x)
-{
-  return exp(-x*x/2)/sqrt(2 * M_PI);
-}
-
-double entropy_cmpare(int k, int w, double N1[2*k+w+1], double N2[2*k+w+2])
-{
-  int m1 = 2 * k;
-  double h1 = 0;
-  for (int i = 0; i < m1; i++) {
-    double q = fabs(N1[i]-N1[i+w]), s = 0;
-    for (int j = 0; j < m1; j++) {
-      s += kernel((N1[i]-N1[j])/q);
-    }
-    double p = 1.0/(m1*q) * s;
-    h1 += - p * log(p);
-  }
-  int m2 = 2 * k + 1;
-  double h2 = 0;
-  for (int i = 0; i < m2; i++) {
-    double q = fabs(N2[i]-N2[i+w]), s = 0;
-    for (int j = 0; j < m2; j++) {
-      s += kernel((N2[i]-N2[j])/q);
-    }
-    double p = 1.0/((m2)*q) * s;
-    h1 += - p * log(p);
-  }
-  return h1 - h2;
-}
-
 double max_cmpare(array_t * d, int i, int k)
 {
   int n = i - k;
@@ -160,8 +98,8 @@ void peak_erase(array_t * a, int i, int k)
 
 int cmp_double(const void * a, const void * b)
 {
-  double A = *((double *)a);
-  double B = *((double *)b);
+  double A = *((const double *)a);
+  double B = *((const double *)b);
   if (A < B) {
     return -1;
   } else if (A > B) {
@@ -173,10 +111,8 @@ int cmp_double(const void * a, const void * b)
 /*! this function searches for peaks in dataset \a data using
  the 3-point-rule for picking and standard deviation for selecting
  the peaks */
-array_t * peaks_find(array_t * data, int swindow)
+array_t * peaks_find(array_t * data, int swindow, double h)
 {
-  double h = 1.9;
-
   int length = data->length;
 
   array_t * out = array_new(0);
@@ -194,7 +130,7 @@ array_t * peaks_find(array_t * data, int swindow)
   int w = swindow;
   do {
     w *= 1.5;
-    h *= h;
+    h *= h*2;
     out->length = 0;
     double mean = vec_mean(length, a->data);
     double sdev = vec_deviation(length, a->data, mean);
@@ -234,7 +170,7 @@ array_t * peaks_find(array_t * data, int swindow)
   free(a);
   free(out);
 
-  qsort(ret->data, sizeof(double), ret->length, cmp_double);
+  qsort(ret->data, ret->length, sizeof(double), cmp_double);
 
   return ret;
 }

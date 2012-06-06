@@ -27,7 +27,7 @@ config = {
       + 0.08881127950008 * x^2
       - 0.000260375459505 * x^3
   end;
-  enrgrange = {0, 205, 6};
+  enrgrange = {-150, 0, 6};
   output = {
     dir = "./simple";
     apsi = "apsi.dat";

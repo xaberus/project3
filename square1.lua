@@ -11,7 +11,7 @@ local pi = math.pi
 config = {
   bins = 4096*2;  dt = 0.0001;
   range = {-10,20};
-  steps = 10; runs = 50000;
+  steps = 10; runs = 100000;
   vstep = 100; vframes = 200;
   --
   potential = function(x)
@@ -20,7 +20,8 @@ config = {
   psi = function(x)
     if 0 < x and x < L then
       return {
-        sqrt(2/L) * sin(1*pi/L * x) + sqrt(2/L) * sin(2*pi/L * x),
+        -- + sqrt(2/L) * sin(2*pi/L * x)
+        sqrt(2/L) * sin(1*pi/L * x),
         0
       }
     else
@@ -30,7 +31,7 @@ config = {
   energy = function(k)
     return pi^2 * k^2/L^2
   end;
-  enrgrange = {0, 10, 6};
+  enrgrange = {0, 4, 6, 3};
   output = {
     dir = "./square1";
     apsi = "apsi.dat";

@@ -73,7 +73,8 @@ typedef struct preferences {
   struct {
     double min;         /**< minimal energy to consider */
     double max;         /**< maximal energy to consider */
-    double win;         /**< maximal energy to consider */
+    double win;         /**< peak search window */
+    double sel;         /**< peak selector */
   } enrgrange;          /**< hints for gnuplot */
 
   array_t  * theoenrg;  /**< theoretical energies from config */

@@ -14,17 +14,15 @@ config = {
     return omega^2/4 * x ^ 2;
   end;
   psi = function(x)
-    --return  {exp(-.5*omega/4/sqrt(2.5)*x^2),0}
-    --return  {exp(-omega/4*x^2),0}
     return {
-      exp(-omega/4*x^2) + (x*sqrt(omega))/exp(x^2*omega/4.),
+      exp(-omega/4*x^2),
       0
     }
   end;
   energy = function(k)
     return omega * (.5 + k)
   end;
-  enrgrange = {0, 2*omega, 6};
+  enrgrange = {0, 2*omega, 6, 3.5};
   output = {
     dir = "./harmosc1";
     apsi = "apsi.dat";
