@@ -9,6 +9,7 @@ find_program(PDFLATEX pdflatex)
 set(PRESETS
   "simple"
   "square"
+  "square1"
   "harmosca"
   "harmosc1"
 )
@@ -79,6 +80,12 @@ set_target_properties(projekt3 PROPERTIES COMPILE_FLAGS ${CFLAGS})
 set_target_properties(projekt3 PROPERTIES LINK_FLAGS ${LFLAGS})
 target_link_libraries(projekt3 ${PKG_LIBRARIES} fftw3_threads m)
 
+add_executable(tabgen
+  ${projekt_SOURCE_DIR}/tabgen.c
+)
+set_target_properties(tabgen PROPERTIES COMPILE_FLAGS ${CFLAGS})
+target_link_libraries(tabgen ${PKG_LIBRARIES} m)
+
 foreach(PRESET ${PRESETS})
   message("adding ${PRESET}")
   if(${CAIRO_FOUND})
@@ -115,6 +122,17 @@ foreach(PRESET ${PRESETS})
   endif()
 
   set(CONFS ${CONFS} "${projekt_SOURCE_DIR}/${PRESET}.lua")
+
+  add_custom_command(
+    OUTPUT
+      "${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc"
+    COMMAND
+      $<TARGET_FILE:tabgen> "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
+        >"${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc"
+    MAIN_DEPENDENCY
+      "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat")
+
+  set(SPECTRA ${SPECTRA} "${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc")
 
   if(${CAIRO_FOUND})
     add_custom_command(
@@ -176,6 +194,7 @@ foreach(PRESET ${PRESETS})
         "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/theoenrg.dat"
+        "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/movie.webm"
 
         "${projekt_SOURCE_DIR}/${PRESET}/init.pdf"
@@ -190,6 +209,7 @@ foreach(PRESET ${PRESETS})
         "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/theoenrg.dat"
+        "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
 
         "${projekt_SOURCE_DIR}/${PRESET}/init.pdf"
         "${projekt_SOURCE_DIR}/${PRESET}/corr.pdf"
@@ -227,6 +247,7 @@ add_custom_command(
   DEPENDS
     "${projekt_SOURCE_DIR}/doc/projekt3.tex"
     ${PLOTS}
+    ${SPECTRA}
     ${CONFS}
   COMMENT
     "Generating LaTeX doc"

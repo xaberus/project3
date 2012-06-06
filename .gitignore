@@ -1,13 +1,12 @@
 image*.png
 movie.mp4
-.projekt4
 plotc.png
 plotc.txt
 plot.png
 plotck.png
 plotck.txt
 projekt3
-projekt4
+tabgen
 plotE.txt
 CMakeCache.txt
 CMakeFiles/*
@@ -18,3 +17,4 @@ harmosc1/*
 harmosca/*
 simple/*
 square/*
+square1/*

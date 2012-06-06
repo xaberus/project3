@@ -39,6 +39,6 @@ array_t * array_equipart(double start, double end, int points);
 array_t * array_append(array_t * z, double x);
 
 array_t * array_first_diff_3(double h, array_t * f, double gm, double gp);
-array_t * search_der_sign_change_3(double h, array_t * f, double gm, double gp);
+array_t * search_der_sign_change_3(double h, array_t * f, double gm, double gp, double tol);
 
 #endif /* _ARRAY_H_ */

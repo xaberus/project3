@@ -6,7 +6,7 @@ config = {
   bins = 4096*4;
   dt = 0.0001;
   range = {-8,8};
-  steps = 10; runs = 50000;
+  steps = 10; runs = 100000;
   --steps = 10; runs = 100000;
   vstep = 1; vframes = 1;
   --
@@ -17,7 +17,7 @@ config = {
   end;
   psi = function(x)
     local a, s = 1.9, 0.87
-    return {exp(-(x-a)^2/(2*s^2))+exp(-(x+a)^2/(2*s^2)), 0}
+    return {exp(-(x-a)^2/(2*s^2)),exp(-(x+a)^2/(2*s^2))}
   end;
   energy = function(k)
     local x = k + 1

@@ -36,7 +36,7 @@ set tics out
 
 set noy2tics
 
-set y2range [-1 : 10]
+set y2range [-10 : 10]
 
 set autoscale  y
 #set autoscale y2
@@ -45,6 +45,6 @@ set datafile separator ";"
 
 plot \
   "dftcorr.dat" using 1:4 axis x1y1 with lines linestyle 3 title "|F[c(t)](eps)|", \
-  "spectrum.dat" using 1:2 axis x1y1 with points title "Peaks", \
-  "theoenrg.dat" using ($2):(-1) axis x1y2 with impulses linestyle 1 title "theoretische Energien";
+  "spectrum.dat" using 1:(-$2) axis x1y1 with impulses title "Peaks", \
+  "theoenrg.dat" using ($2):(0):(-1) axis x1y2 with points linestyle 1 title "theoretische Energien";
 

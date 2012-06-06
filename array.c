@@ -119,7 +119,7 @@ array_t * array_first_diff_3(double h, array_t * f, double gm, double gp)
  searches for sign changes in f samples on h grid using 3-point-rule
  and assuming a boundary condition of f[-1] = gm, f[n+1] = gp
  node: returns indices cast to double */
-array_t * search_der_sign_change_3(double h, array_t * f, double gm, double gp)
+array_t * search_der_sign_change_3(double h, array_t * f, double gm, double gp, double tol)
 {
   array_t * df = array_first_diff_3(h, f, gm, gp);
   array_t * sc = array_new(0);
@@ -129,7 +129,9 @@ array_t * search_der_sign_change_3(double h, array_t * f, double gm, double gp)
     double d = df->data[l];
     //printf("%.17g %.17g\n", s->data[l], d);
     if ((si < 0 && d > 0) || (si > 0 && d < 0)) {
-      sc = array_append(sc, l);
+      if (fabs((f->data[l-1] - f->data[l+1]) / h) > tol) {
+        sc = array_append(sc, l);
+      }
     }
     si = d;
   }
