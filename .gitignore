@@ -1,13 +1,8 @@
-image*.png
-movie.mp4
-plotc.png
-plotc.txt
-plot.png
-plotck.png
-plotck.txt
-projekt3
+libprojekt.a
+compile
+evaluate
+simulate
 tabgen
-plotE.txt
 CMakeCache.txt
 CMakeFiles/*
 cmake_install.cmake

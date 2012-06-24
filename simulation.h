@@ -85,7 +85,11 @@ typedef struct preferences {
 void preferences_free(preferences_t * prefs);
 preferences_t * preferences_new();
 int preferences_read(lua_State * L, preferences_t * prefs);
+void preferences_serialize(preferences_t * prefs, FILE * fp);
+void preferences_deserialize(preferences_t * prefs, FILE * fp);
 int start_simulation(preferences_t * prefs);
-int dump_results(preferences_t * prefs);
+void dump_results(preferences_t * prefs, FILE * fp);
+void undump_results(preferences_t * prefs, FILE * fp);
+int eval_results(preferences_t * prefs);
 
 #endif /* _SIMULATION_H_ */

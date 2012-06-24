@@ -1,5 +1,6 @@
 cmake_minimum_required (VERSION 2.8.6)
 project(projekt)
+
 include(FindPkgConfig)
 find_package(Doxygen REQUIRED)
 find_program(FFMPEG ffmpeg)
@@ -19,7 +20,7 @@ set(PRESETS
 #include_directories()
 
 pkg_check_modules(PKG REQUIRED "fftw3" "lua")
-pkg_check_modules(CAIRO REQUIRED "cairo")
+#pkg_check_modules(CAIRO REQUIRED "cairo")
 
 set(CFLAGS_LIST
   "-std=gnu99"
@@ -68,17 +69,31 @@ include_directories(${libnih_SOURCE_DIR})
 string (REPLACE ";" " " CFLAGS "${CFLAGS_LIST}")
 string (REPLACE ";" " " LFLAGS "${LFLAGS_LIST}")
 
-add_executable(projekt3
+add_library(projekt STATIC
   ${projekt_SOURCE_DIR}/simulation.c
-  ${projekt_SOURCE_DIR}/projekt.c
   ${projekt_SOURCE_DIR}/splitop.c
   ${projekt_SOURCE_DIR}/carray.c
   ${projekt_SOURCE_DIR}/array.c
   ${projekt_SOURCE_DIR}/peaks.c
 )
-set_target_properties(projekt3 PROPERTIES COMPILE_FLAGS ${CFLAGS})
-set_target_properties(projekt3 PROPERTIES LINK_FLAGS ${LFLAGS})
-target_link_libraries(projekt3 ${PKG_LIBRARIES} fftw3_threads m)
+set_target_properties(projekt PROPERTIES COMPILE_FLAGS ${CFLAGS})
+set_target_properties(projekt PROPERTIES LINK_FLAGS ${LFLAGS})
+
+add_executable(simulate ${projekt_SOURCE_DIR}/simulate.c)
+set_target_properties(simulate PROPERTIES COMPILE_FLAGS ${CFLAGS})
+set_target_properties(simulate PROPERTIES LINK_FLAGS ${LFLAGS})
+target_link_libraries(simulate ${PKG_LIBRARIES} fftw3_threads m projekt)
+
+add_executable(compile ${projekt_SOURCE_DIR}/compile.c)
+set_target_properties(compile PROPERTIES COMPILE_FLAGS ${CFLAGS})
+set_target_properties(compile PROPERTIES LINK_FLAGS ${LFLAGS})
+target_link_libraries(compile ${PKG_LIBRARIES} fftw3_threads m projekt)
+
+add_executable(evaluate ${projekt_SOURCE_DIR}/evaluate.c)
+set_target_properties(evaluate PROPERTIES COMPILE_FLAGS ${CFLAGS})
+set_target_properties(evaluate PROPERTIES LINK_FLAGS ${LFLAGS})
+target_link_libraries(evaluate ${PKG_LIBRARIES} fftw3_threads m projekt)
+
 
 #add_executable(tabgen
 #  ${projekt_SOURCE_DIR}/tabgen.c
@@ -88,6 +103,29 @@ target_link_libraries(projekt3 ${PKG_LIBRARIES} fftw3_threads m)
 
 foreach(PRESET ${PRESETS})
   message("adding ${PRESET}")
+
+  add_custom_command(
+    OUTPUT
+      "${projekt_SOURCE_DIR}/${PRESET}/config.ser"
+    COMMAND
+      mkdir -p "${projekt_SOURCE_DIR}/${PRESET}"
+    COMMAND
+      $<TARGET_FILE:compile>
+        "${projekt_SOURCE_DIR}/${PRESET}.lua"
+        "${projekt_SOURCE_DIR}/${PRESET}/config.ser"
+    MAIN_DEPENDENCY
+      "${projekt_SOURCE_DIR}/${PRESET}.lua")
+
+  add_custom_command(
+    OUTPUT
+      "${projekt_SOURCE_DIR}/${PRESET}/result.dat"
+    COMMAND
+      $<TARGET_FILE:simulate>
+        "${projekt_SOURCE_DIR}/${PRESET}/config.ser"
+        "${projekt_SOURCE_DIR}/${PRESET}/result.dat"
+    MAIN_DEPENDENCY
+      "${projekt_SOURCE_DIR}/${PRESET}/config.ser")
+
   if(${CAIRO_FOUND})
     add_custom_command(
       OUTPUT
@@ -96,14 +134,16 @@ foreach(PRESET ${PRESETS})
         "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/theoenrg.dat"
+        "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/stats"
         "${projekt_SOURCE_DIR}/${PRESET}/video/image00000.png"
       COMMAND
-        mkdir -p "${projekt_SOURCE_DIR}/${PRESET}"
-      COMMAND
-        $<TARGET_FILE:projekt3> "${projekt_SOURCE_DIR}/${PRESET}.lua"
+        $<TARGET_FILE:evaluate>
+          "${projekt_SOURCE_DIR}/${PRESET}/config.ser"
+          "${projekt_SOURCE_DIR}/${PRESET}/result.dat"
       MAIN_DEPENDENCY
-        "${projekt_SOURCE_DIR}/${PRESET}.lua")
+        "${projekt_SOURCE_DIR}/${PRESET}/config.ser"
+        "${projekt_SOURCE_DIR}/${PRESET}/result.dat")
   else()
     add_custom_command(
       OUTPUT
@@ -111,14 +151,16 @@ foreach(PRESET ${PRESETS})
         "${projekt_SOURCE_DIR}/${PRESET}/corr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
+        "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/theoenrg.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/stats"
       COMMAND
-        mkdir -p "${projekt_SOURCE_DIR}/${PRESET}"
-      COMMAND
-        $<TARGET_FILE:projekt3> "${projekt_SOURCE_DIR}/${PRESET}.lua"
+        $<TARGET_FILE:evaluate>
+          "${projekt_SOURCE_DIR}/${PRESET}/config.ser"
+          "${projekt_SOURCE_DIR}/${PRESET}/result.dat"
       MAIN_DEPENDENCY
-        "${projekt_SOURCE_DIR}/${PRESET}.lua")
+        "${projekt_SOURCE_DIR}/${PRESET}/config.ser"
+        "${projekt_SOURCE_DIR}/${PRESET}/result.dat")
   endif()
 
   set(CONFS ${CONFS} "${projekt_SOURCE_DIR}/${PRESET}.lua")
@@ -232,11 +274,6 @@ add_custom_command(
   COMMENT
     "Generating API documentation with Doxygen"
   VERBATIM)
-
-message("using plots:")
-foreach(PLOT ${PLOTS})
-  message(${PLOT})
-endforeach()
 
 add_custom_command(
   OUTPUT

@@ -343,6 +343,143 @@ int preferences_read(lua_State * L, preferences_t * prefs)
   return 0;
 }
 
+void preferences_serialize(preferences_t * prefs, FILE * fp)
+{
+#define WRITE_FIELD(_f) assert(fwrite(&prefs->_f, sizeof(prefs->_f), 1, fp) == 1)
+#define WRITE_STR(_f) \
+  do { \
+    size_t len = strlen(prefs->_f); \
+    assert(fwrite(&len, sizeof(len), 1, fp) == 1); \
+    assert(fwrite(prefs->_f, 1, len, fp) == len); \
+  } while(0)
+  WRITE_FIELD(bins);
+  WRITE_FIELD(dt);
+  WRITE_FIELD(range.min);
+  WRITE_FIELD(range.max);
+  WRITE_FIELD(steps);
+  WRITE_FIELD(runs);
+  WRITE_FIELD(vstep);
+  WRITE_FIELD(vframes);
+  WRITE_FIELD(xpos->length);
+  for (int k = 0; k < prefs->xpos->length; k++) {
+    WRITE_FIELD(xpos->data[k]);
+  }
+  WRITE_FIELD(potential->length);
+  for (int k = 0; k < prefs->potential->length; k++) {
+    WRITE_FIELD(potential->data[k]);
+  }
+  WRITE_FIELD(psi->length);
+  for (int k = 0; k < prefs->psi->length; k++) {
+    WRITE_FIELD(psi->data[k]);
+  }
+  WRITE_STR(output.dir);
+  WRITE_STR(output.apsi);
+  WRITE_STR(output.pot);
+  WRITE_STR(output.corr);
+  WRITE_STR(output.dftcorr);
+  WRITE_STR(output.theoenrg);
+  WRITE_STR(output.spectrum);
+  WRITE_FIELD(tsteps);
+  WRITE_FIELD(dx);
+  WRITE_FIELD(dk);
+  WRITE_FIELD(dE);
+  WRITE_FIELD(enrgrange.min);
+  WRITE_FIELD(enrgrange.max);
+  WRITE_FIELD(enrgrange.win);
+  WRITE_FIELD(enrgrange.sel);
+  WRITE_FIELD(theoenrg->length);
+  for (int k = 0; k < prefs->theoenrg->length; k++) {
+    WRITE_FIELD(theoenrg->data[k]);
+  }
+#undef WRITE_FIELD
+#undef WRITE_STR
+}
+
+void preferences_deserialize(preferences_t * prefs, FILE * fp)
+{
+#define READ_FIELD(_f) assert(fread(&prefs->_f, sizeof(prefs->_f), 1, fp) == 1)
+#define READ_STR(_f) \
+  do { \
+    size_t len; \
+    assert(fread(&len, sizeof(len), 1, fp) == 1); \
+    prefs->_f = malloc(len + 1); assert(prefs->_f); \
+    assert(fread(prefs->_f, 1, len, fp) == len); \
+    prefs->_f[len] = 0; \
+  } while(0)
+#define READ_ARRAY(_f, _new) \
+  do { \
+    int len; \
+    assert(fread(&len, sizeof(len), 1, fp) == 1); \
+    prefs->_f = _new(len); assert(prefs->_f); \
+    size_t sz = sizeof(prefs->_f->data[0]) * len; \
+    assert(fread(prefs->_f->data, 1, sz, fp) == sz); \
+  } while(0)
+  READ_FIELD(bins);
+  READ_FIELD(dt);
+  READ_FIELD(range.min);
+  READ_FIELD(range.max);
+  READ_FIELD(steps);
+  READ_FIELD(runs);
+  READ_FIELD(vstep);
+  READ_FIELD(vframes);
+  READ_ARRAY(xpos, array_new);
+  READ_ARRAY(potential, array_new);
+  READ_ARRAY(psi, carray_new);
+  READ_STR(output.dir);
+  READ_STR(output.apsi);
+  READ_STR(output.pot);
+  READ_STR(output.corr);
+  READ_STR(output.dftcorr);
+  READ_STR(output.theoenrg);
+  READ_STR(output.spectrum);
+  READ_FIELD(tsteps);
+  READ_FIELD(dx);
+  READ_FIELD(dk);
+  READ_FIELD(dE);
+  READ_FIELD(enrgrange.min);
+  READ_FIELD(enrgrange.max);
+  READ_FIELD(enrgrange.win);
+  READ_FIELD(enrgrange.sel);
+  READ_ARRAY(theoenrg, array_new);
+#undef READ_FIELD
+#undef READ_STR
+#undef READ_ARRAY
+
+  printf("configuration: \n");
+  printf("  bins:    %d\n", prefs->bins);
+  printf("  dt:      %g\n", prefs->dt);
+  printf("  range:   [%g;%g]\n", prefs->range.min, prefs->range.max);
+  printf("  steps:   %d\n", prefs->steps);
+  printf("  runs:    %d\n", prefs->runs);
+#ifdef USE_CAIRO
+  if (prefs->vstep > 0 && prefs->vframes > 0) {
+    printf("  will render video with:\n");
+    printf("    vstep:       %d\n", prefs->vstep);
+    printf("    vframes:     %d\n", prefs->vframes);
+  }
+#endif
+  printf("  potential(x)\n");
+  printf("  psi(x)\n");
+  printf("  output:\n");
+  printf("    dir:         %s\n", prefs->output.dir);
+  printf("    apsi:        %s/%s\n", prefs->output.dir, prefs->output.apsi);
+  printf("    pot:         %s/%s\n", prefs->output.dir, prefs->output.pot);
+  printf("    corr:        %s/%s\n", prefs->output.dir, prefs->output.corr);
+  printf("    dftcorr:     %s/%s\n", prefs->output.dir, prefs->output.dftcorr);
+  printf("    theoenrg:    %s/%s\n", prefs->output.dir, prefs->output.theoenrg);
+  printf("  derrived values are:\n");
+  printf("    tsteps:      %d\n", prefs->tsteps);
+  printf("    dx:          %g\n", prefs->dx);
+  printf("    dk:          %g\n", prefs->dk);
+  printf("    dE:          %g\n", prefs->dE);
+  printf("  maximal energy detectable is %g\n", prefs->dE * prefs->runs);
+  printf("  enrgrange [%g;%g]\n", prefs->enrgrange.min, prefs->enrgrange.max);
+  printf("  peak search window is %g\n", prefs->enrgrange.win);
+  printf("  peak selector is %g sdev\n", prefs->enrgrange.sel);
+  printf("    theoenrg(k)\n");
+  printf("\n");
+}
+
 /*! \memberof preferences
  * this function runs the simulation according to preferences \a prefs
  */
@@ -471,10 +608,47 @@ int start_simulation(preferences_t * prefs)
   return 0;
 }
 
+void dump_results(preferences_t * prefs, FILE * fp)
+{
+  results_t * res = prefs->results;
+#define WRITE_FIELD(_f) assert(fwrite(&res->_f, sizeof(res->_f), 1, fp) == 1)
+  WRITE_FIELD(co->length);
+  for (int k = 0; k < res->co->length; k++) {
+    WRITE_FIELD(co->data[k]);
+  }
+  WRITE_FIELD(c->length);
+  for (int k = 0; k < res->c->length; k++) {
+    WRITE_FIELD(c->data[k]);
+  }
+  WRITE_FIELD(ck->length);
+  for (int k = 0; k < res->ck->length; k++) {
+    WRITE_FIELD(ck->data[k]);
+  }
+#undef WRITE_FIELD
+}
+
+void undump_results(preferences_t * prefs, FILE * fp)
+{
+#define READ_ARRAY(_f, _new) \
+  do { \
+    int len; \
+    assert(fread(&len, sizeof(len), 1, fp) == 1); \
+    res->_f = _new(len); assert(res->_f); \
+    size_t sz = sizeof(res->_f->data[0]) * len; \
+    assert(fread(res->_f->data, 1, sz, fp) == sz); \
+  } while(0)
+  results_t * res = malloc(sizeof(results_t)); assert(res);
+  READ_ARRAY(co, carray_new);
+  READ_ARRAY(c, carray_new);
+  READ_ARRAY(ck, carray_new);
+#undef READ_ARRAY
+  prefs->results = res;
+}
+
 /*! \memberof preferences
- * this function just dumps the results \a prefs
+ * this function just evaluates the results \a prefs
  */
-int dump_results(preferences_t * prefs)
+int eval_results(preferences_t * prefs)
 {
   int steps = prefs->steps;
   double dt = prefs->dt;
