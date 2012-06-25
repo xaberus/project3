@@ -8,6 +8,7 @@ find_program(GNUPLOT gnuplot)
 find_program(PDFLATEX pdflatex)
 
 set(PRESETS
+  "badness"
   "simple"
   "square"
   "square1"

@@ -275,7 +275,7 @@ int preferences_read(lua_State * L, preferences_t * prefs)
   prefs->dE = 2 * M_PI / (prefs->dt * prefs->tsteps);
   printf("    dE:          %g\n", prefs->dE);
 
-  double maxE = prefs->dE * prefs->runs;
+  double maxE = prefs->dE * prefs->runs / 2;
   printf("  maximal energy detectable is %g\n", maxE);
 
   // get the energy range for plot, this effectively just passed to gnuplot
@@ -472,7 +472,7 @@ void preferences_deserialize(preferences_t * prefs, FILE * fp)
   printf("    dx:          %g\n", prefs->dx);
   printf("    dk:          %g\n", prefs->dk);
   printf("    dE:          %g\n", prefs->dE);
-  printf("  maximal energy detectable is %g\n", prefs->dE * prefs->runs);
+  printf("  maximal energy detectable is %g\n", prefs->dE * prefs->runs / 2);
   printf("  enrgrange [%g;%g]\n", prefs->enrgrange.min, prefs->enrgrange.max);
   printf("  peak search window is %g\n", prefs->enrgrange.win);
   printf("  peak selector is %g sdev\n", prefs->enrgrange.sel);
