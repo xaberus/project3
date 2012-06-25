@@ -1,7 +1,6 @@
 *.log
 *.aux
 *.dvi
-*.pdf
 *.synctex.gz
 *.out
 
