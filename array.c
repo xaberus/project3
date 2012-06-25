@@ -23,6 +23,8 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdarg.h>
 #include <math.h>
 
 #include "array.h"
@@ -139,4 +141,79 @@ array_t * search_der_sign_change_3(double h, array_t * f, double gm, double gp, 
   free(df);
 
   return sc;
+}
+
+/*! \memberof array
+ returns an array with r[i]=fn(z[i]) */
+array_t * array_map(array_t * z, double (*fn)(double))
+{
+  int length = z->length;
+  array_t * r = array_new(z->length);
+  double * d = r->data, * s = z->data;
+  for (int k = 0; k < length; k++) {
+    *(d++) = fn(*(s++));
+  }
+  return r;
+}
+
+/*! \memberof array
+ returns an array with r[i]=fn(z[i], arg) */
+array_t * array_mapv(array_t * z, double (*fn)(double, void*), void * arg)
+{
+  int length = z->length;
+  array_t * r = array_new(z->length);
+  double * d = r->data, * s = z->data;
+  for (int k = 0; k < length; k++) {
+    *(d++) = fn(*(s++), arg);
+  }
+  return r;
+}
+
+
+/*! \memberof array
+ dumps \a argc arrays to file \a name */
+void array_dump_to_file(const char name[], const char sep[], int argc, ...)
+{
+  array_t *argv[argc];
+  va_list ap;
+
+  va_start(ap, argc);
+  for (int i = 0; i < argc; i++) {
+    argv[i] = va_arg(ap, array_t *);
+  }
+  va_end(ap);
+
+  int length = 0;
+
+  for (int i = 0; i < argc; i++) {
+    if (argv[i]) { // NULL means counter
+      int l = argv[i]->length;
+      length = length < l ? l : length;
+    }
+  }
+
+  FILE * fp = fopen(name, "w");
+
+  if (fp) {
+    for (int n = 0; n < length; n++) {
+      for (int i = 0; i < argc; i++) {
+        if (argv[i]) {
+          double p = argv[i]->data[n];
+          if (i > 0) {
+            fprintf(fp, "%s%.17e", sep, p);
+          } else {
+            fprintf(fp, "%.17e", p);
+          }
+        } else {
+          if (i > 0) {
+            fprintf(fp, "%s%d", sep, n);
+          } else {
+            fprintf(fp, "%d", n);
+          }
+        }
+      }
+      fputs("\n", fp);
+    }
+    fclose(fp);
+  }
 }

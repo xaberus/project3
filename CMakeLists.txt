@@ -73,6 +73,7 @@ string (REPLACE ";" " " LFLAGS "${LFLAGS_LIST}")
 add_library(projekt STATIC
   ${projekt_SOURCE_DIR}/simulation.c
   ${projekt_SOURCE_DIR}/splitop.c
+  ${projekt_SOURCE_DIR}/numerov.c
   ${projekt_SOURCE_DIR}/carray.c
   ${projekt_SOURCE_DIR}/array.c
   ${projekt_SOURCE_DIR}/peaks.c
@@ -95,6 +96,9 @@ set_target_properties(evaluate PROPERTIES COMPILE_FLAGS ${CFLAGS})
 set_target_properties(evaluate PROPERTIES LINK_FLAGS ${LFLAGS})
 target_link_libraries(evaluate ${PKG_LIBRARIES} fftw3_threads m projekt)
 
+add_executable(testpeaks ${projekt_SOURCE_DIR}/testpeaks.c)
+set_target_properties(testpeaks PROPERTIES COMPILE_FLAGS ${CFLAGS})
+target_link_libraries(testpeaks ${PKG_LIBRARIES} m projekt)
 
 #add_executable(tabgen
 #  ${projekt_SOURCE_DIR}/tabgen.c

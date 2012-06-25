@@ -26,6 +26,7 @@
 
 #include <lua.h>
 
+#include <stdio.h>
 #include "array.h"
 #include "carray.h"
 

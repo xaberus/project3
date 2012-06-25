@@ -2,8 +2,10 @@ local math = require("math")
 local complex = require("complex")
 local exp = math.exp
 
-local dx = 0.825/10
-local bins = 512
+--local dx = 0.825/10
+--local bins = 512
+local bins = 4096
+local dx = 16/bins
 
 config = {
   bins = bins;

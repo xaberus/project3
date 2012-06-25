@@ -74,3 +74,23 @@ carray_t * carray_append(carray_t * z, complex double x)
     return t;
   }
 }
+
+/** \memberof carray
+  returns an array of absolute values of \a z using prermuation \a index */
+array_t * carray_abs(carray_t * z, int * index)
+{
+  int length = z->length;
+  array_t * r = array_new(length);
+  complex double * s = z->data;
+  double * d = r->data;
+  if (index) {
+    for (int k = 0; k < length; k++) {
+      *(d++) = cabs(s[index[k]]);
+    }
+  } else {
+    for (int k = 0; k < length; k++) {
+      *(d++) = cabs(*(s++));
+    }
+  }
+  return r;
+}

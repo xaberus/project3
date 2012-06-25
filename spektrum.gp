@@ -43,6 +43,8 @@ set autoscale  y
 
 #set datafile separator ";"
 
+set logscale y
+
 plot \
   "dftcorr.dat" using 1:4 axis x1y1 with lines linestyle 3 title "|F[c(t)](eps)|", \
   "spectrum.dat" using 1:(-$2) axis x1y1 with impulses title "Peaks", \

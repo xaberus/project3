@@ -24,6 +24,8 @@
 #ifndef _CARRAY_H_
 #define _CARRAY_H_
 
+#include "array.h"
+
 #include <complex.h>
 
 /*! A rezizeable vector of complex doubles */
@@ -38,5 +40,7 @@ typedef struct carray {
 carray_t * carray_new(int length);
 carray_t * carray_new_sized(int length, int alloc);
 carray_t * carray_append(carray_t * z, complex double x);
+
+array_t * carray_abs(carray_t * z, int * index);
 
 #endif /* _CARRAY_H_ */

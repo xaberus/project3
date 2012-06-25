@@ -3,6 +3,7 @@ compile
 evaluate
 simulate
 tabgen
+testpeaks
 CMakeCache.txt
 CMakeFiles/*
 cmake_install.cmake

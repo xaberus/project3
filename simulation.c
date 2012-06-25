@@ -44,6 +44,8 @@
 #include "carray.h"
 #include "peaks.h"
 
+#include "numerov.h"
+
 #include "simulation.h"
 
 /*! \memberof results
@@ -85,6 +87,7 @@ void preferences_free(preferences_t * prefs) {
   free(prefs->output.corr);
   free(prefs->output.dftcorr);
   free(prefs->output.theoenrg);
+  free(prefs->output.spectrum);
 
   if (prefs->results) {
     results_free(prefs->results);
@@ -257,6 +260,7 @@ int preferences_read(lua_State * L, preferences_t * prefs)
   printf("    corr:        %s/%s\n", prefs->output.dir, prefs->output.corr);
   printf("    dftcorr:     %s/%s\n", prefs->output.dir, prefs->output.dftcorr);
   printf("    theoenrg:    %s/%s\n", prefs->output.dir, prefs->output.theoenrg);
+  printf("    spectrum:    %s/%s\n", prefs->output.dir, prefs->output.spectrum);
 
   // number of steps
   printf("  derrived values are:\n");
@@ -467,6 +471,7 @@ void preferences_deserialize(preferences_t * prefs, FILE * fp)
   printf("    corr:        %s/%s\n", prefs->output.dir, prefs->output.corr);
   printf("    dftcorr:     %s/%s\n", prefs->output.dir, prefs->output.dftcorr);
   printf("    theoenrg:    %s/%s\n", prefs->output.dir, prefs->output.theoenrg);
+  printf("    spectrum:    %s/%s\n", prefs->output.dir, prefs->output.spectrum);
   printf("  derrived values are:\n");
   printf("    tsteps:      %d\n", prefs->tsteps);
   printf("    dx:          %g\n", prefs->dx);
@@ -754,42 +759,42 @@ int eval_results(preferences_t * prefs)
     for (int k = 0; k < ck->length; k++) {
       data->data[k] = cabs(ck->data[k]);
     }*/
-    array_t * data = array_new_sized(0, ck->length);
-    for (int k = ck->length/2; k < ck->length; k++) {
-      data = array_append(data, cabs(ck->data[k]));
-    }
-    for (int k = 0; k < ck->length/2; k++) {
-      data = array_append(data, cabs(ck->data[k]));
-    }
-    array_t * peaks = peaks_find(data, 6, prefs->enrgrange.sel);
 
-    /*for (int k = 0; k < peaks->length; k++) {
-      int i = peaks->data[k];
-      if (i > 0 && i < data->length) {
-        if (i >= ck->length/2 && i < ck->length) {
-          fprintf(fp, "%.17e %.17e\n", (i - ck->length) * dE, data->data[i]);
-        }
-      }
-    }
-    for (int k = 0; k < peaks->length; k++) {
-      int i = peaks->data[k];
-      if (i > 0 && i < data->length) {
-        if (i < ck->length/2) {
-          fprintf(fp, "%.17e %.17e\n", i * dE, data->data[i]);
-        }
-      }
-    }*/
+    int length = ck->length, o = 0;
+    int * index = malloc(sizeof(int) * length); assert(index);
+
+    /* create a map to place negative energies in the richt place */
+    for (int k = ck->length/2; k < ck->length; k++) { index[o++] = k; }
+    for (int k = 0; k < ck->length/2; k++) { index[o++] = k; }
+
+    array_t * data = carray_abs(ck, index);
+    array_t * logdat = array_map(data, log);
+    array_t * peaks = peaks_find(logdat, 6, prefs->enrgrange.sel);
 
     for (int k = 0; k < peaks->length; k++) {
       int i = peaks->data[k];
       if (i > 0 && i < data->length) {
-        fprintf(fp, "%.17e %.17e\n", (i - ck->length/2.0) * dE, data->data[i]);
+        double z = (i - ck->length/2.0) * dE;
+        if (z >= prefs->enrgrange.min && z <= prefs->enrgrange.max) {
+          fprintf(fp, "%.17e %.17e\n", z, data->data[i]);
+        }
       }
     }
 
     fclose(fp);
     free(peaks);
     free(data);
+    free(logdat);
+    free(index);
+  }
+
+  {
+    array_t * numen = numerov_energies(prefs);
+    int len = strlen(prefs->output.dir) + strlen("numen.dat") + 10;
+    char path[len];
+    snprintf(path, len, "%s/%s", prefs->output.dir, "numen.dat");
+    array_dump_to_file(path, " ", 1, numen);
+    free(numen);
   }
 
   // dump variables for gnuplot

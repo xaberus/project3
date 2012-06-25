@@ -3,8 +3,10 @@
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 
 #include "peaks.h"
+
 
 int main(int argc, char * argv[])
 {
@@ -18,12 +20,14 @@ int main(int argc, char * argv[])
     } while(!feof(fp));
     fclose(fp);
 
-    array_t * peaks = peaks_find(data, 6, 3);
+    array_t * logdat = array_map(data, log);
+    array_t * peaks = peaks_find(logdat, 6, 2);
 
     for (int k = 0; k < peaks->length; k++) {
       fprintf(stdout, "%g\n", 1.25663706143591736e-01 * (peaks->data[k] - data->length/2.0));
     }
     free(peaks);
     free(data);
+    free(logdat);
   }
 }
