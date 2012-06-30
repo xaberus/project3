@@ -11,6 +11,8 @@
 \usepackage{graphicx}
 \usepackage{lmodern}
 
+\usepackage{units}
+
 \usepackage{multirow}
 
 \usepackage{hyperref}
@@ -30,7 +32,7 @@
 
 \lstset{ %
   language=Lua,                % the language of the code
-  basicstyle=\tiny,           % the size of the fonts that are used for the code
+  basicstyle=\small,           % the size of the fonts that are used for the code
   %numbers=left,                   % where to put the line-numbers
   numberstyle=\tiny\color{gray},  % the style that is used for the line-numbers
   stepnumber=2,                   % the step between two line-numbers. If it's 1, each line
@@ -66,6 +68,33 @@
 
 %\usepackage{times}
 %\usepackage{latexsym}
+
+\newcommand{\EnAmpTable}[1]{\pgfplotstabletypeset[%
+				every head row/.style={%
+					before row={\hline%
+						\rowcolor{lightgray}%
+						\multicolumn{2}{|>{\columncolor{lightgray}}c|}{Eigenenergien}\\%
+						\rowcolor{lightgray}%
+					},%
+					after row={\hline},%
+				},%
+				columns/0/.style={column name=$\epsilon_\alpha$, column type={|c}},%
+				columns/1/.style={column name=Amplitude, column type={|c|}},%
+				every last row/.style={after row=\hline},%
+			]{#1}}
+			
+\newcommand{\EnTable}[1]{\pgfplotstabletypeset[%
+				every head row/.style={%
+					before row={\hline%
+						\rowcolor{lightgray}%
+						Eigenenergien\\%
+						\rowcolor{lightgray}%
+					},%
+					after row={\hline},%
+				},%
+				columns/0/.style={column name=$\epsilon_\alpha$, column type={|c|}},%
+				every last row/.style={after row=\hline},%
+			]{#1}}
 
 \setlength\titlebox{2.5cm}    % Expanding the titlebox
 
@@ -433,152 +462,151 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  	\subsection{Suchalgorithmus und sein Grenzen}
+			\includegraphics[scale=.62]{../badness/spektrum}
+			\begin{center}\input{../badness/spectrum.tex.inc}\end{center}
+			
+			Für die Auswertung der Potentiale wähte ich einen Suchalgorithmus der sich
+			leider prinzipbedingt als sehr fehleranflällig heraustellen sollte. 
+			
+			Der eigentliche Suchalgorithmus stammt von \cite{SAPS} und benutzt die
+			einfachste Signifikanzfunktion $S_1$. Da dies meistens nciht ausreicht um
+			ale Peaks zu finden werden nach einer Iteration alle gefundenen Peaks
+			innerhalb des zugehürigen Fensters mithilfe der Funktion
+			$f(x)=\mathrm{e}^{\nicefrac{w}{|x-x_\mathrm{peak}|}}$ \glqq{gelöscht}\grqq, 
+			worauf eine erneute Iteration folgt, bei der allergins Suchschranke 
+			(Forderung in Standardabweichungen)
+			verdoppelt wird, um eine Konvergenz des Verfahrens zu erzwingen.
+			
+		\begin{description}
+			\item[Start]
+				\begin{itemize}
+					\item{berechne werte $a_i = S(d_i)$,
+					  alle Werte $>0$ sind potentielle Peaks}
+				\end{itemize}
+			\item[Iteration]
+				\begin{itemize}
+					\item{vergrößere peak Fenster $w$ um $1.5$}
+					\item{verdopple Suchschranke $h$}
+					\item{berechne Mittelwert $m$ von $\{a_i\}$}
+					\item{berechne Standardabweichung $s$ von $\{a_i\}$}
+					\item{alle Werte $>0$, die um das h-Fache von $s$
+					  abweichen im Fenster eines Peaks}
+					\item{verkleinere jedes Fenster solange, 
+					  bis nur der maximale Wert bleibt;
+					  dieser Wert ist der gesuchte Peak}
+					\item{breche ab, falls keine Peaks gefunden wurden;
+					  andernfals lösche alle Peaks aus $\{a_i\}$ 
+					  und beginne nächste Iteration}
+				\end{itemize}
+		\end{description}
+			
+		Wie man aus der oberen Abbildung erkennen kann entsprechen sind die
+		gefundenen Peaks nicht immer den tatsächlichen Energiewerten, weil
+		durch die Diskretisierung sich das Maximum deutlich vom richtigen Wert
+		verschieben kann.
+
+		\includegraphics[scale=.62]{../square1/spektrum}
+		
+		Leider schlägt der Algorithmus manchmal sogar komplett fehl, wie hier beim
+		Grundzustand des im weiteren betrachteten Kastenpotentials. Der Peaks befindet
+		sich am Rand und unterschiedet sich nicht all zu sehr von seiner Umbgebung,
+		was dazu führt, dass der Suchalgorithmus ihn ignoriert.
+		
+		
+		Wie schon in der oberen Tabelle werde ich im Weiteren die gefundenen
+		Energiewerte mit der Numerov-Approximation für die stationäre 
+		Schrödingergleichung vergleichen. (Das hat den Nachteil, dass man die
+		Potentiale nur relativ kleine werte annehmen müssen, damit die Approximation
+		noch innerhalb der doppelten Genauigkeit berechnet werden kann.)
+		
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   	\subsection{Asymetrischer Doppeltopf}
 			\includegraphics[scale=.62]{../simple/init}
   		Das erste Potential ist ein einfaches Polynom 4. Ordnung, wobei die
   		Koeffizienten aus \cite{FFS} entnommen wurden Leider konnte ich die
   		Ergebnisse von \cite{FFS} nicht für die genannten Parameter reproduzieren, 
-  		die Energien stimmen jedoch für meine Konfiguration mit den gegebenen überein.
-  		\small{\begin{tabular}{|c|c|c|c|c|c|} \hline
-				\multirow{2}{*}{Potential}  &
-					\multicolumn{5}{|c|}{$V(x)= k_0 - k_2 x^2 + k_3 x^3 + k_4 x^4$} \\
-				&
-					\multicolumn{5}{|c|}{$k_0 = -132.7074997, k_2=7, k_3=.5, k_4=1$} \\ \hline
-				\multirow{2}{*}{Parameter}
-				& bins   & range      & steps   & runs  & dt \\
-				          & $8192$ & ${[-8:8]}$ & $10$    & $50k$ & $0.0001$ \\ \hline
-				Start- &
-					\multicolumn{5}{|c|}{
-						$
-							\psi(x) = \mathrm{e}^{\frac{(x-a)^2}{2\sigma^2}}
-											+ i \mathrm{e}^{\frac{(x+a)^2}{2\sigma^2}}
-						$
-					} \\
-				Funktion & \multicolumn{5}{|c|}{$a = 1.9, \sigma = 0.87$} \\\hline
-			\end{tabular}}
+  		die Energien stimmen jedoch für meine Konfiguration mit den gegebenen mehr 
+  		oder weniger überein. (Die Parameter aus \cite{FFS} sind offensichtlich Falsch
+  		ein $\tau = 5.7$ Entspricht einer maximalen simulierbaren Energie von
+  		$\approx 0.551157$, die behaupteten Energien von $~-144$ können also niemals
+  		aus einer Simulation mit diesen Parametern entstanden sein. Man erhält 
+  		widerum ähnliche Werte wenn man sich um 4(!) Größenordnungen von
+  		den agngegebenen Parametern entfernt, d.h. $\tau = \frac{5.7}{1000}$ und
+  		$\xi = \frac{0.825}{10}$).
+  		
+  		
+			Die Parameter werden an die Simulation mit Hilfe eines einfachen
+			Lua-Skripts übergeben, in dem die Tabelle 
+			\lstinline!config! definiert wird.
+			\lstinputlisting[language=Lua]{../simple.lua}
+			Die einzelnen Variablen sind (Grau = optional)
+			
+			\begin{tabular}{ll}
+				\lstinline!bins! & Anzahl der Stützstellen im Ort\\
+				\lstinline!dt!   & einzelner Zeitschritt ($\tau$)\\
+				\lstinline!range!& das betrachtete Ortsintervall $[-8,8]$\\
+				\lstinline!steps!& $\tau$ zwischen Korrelationsmessungen\\
+				\lstinline!runs!& Anzahl Korrelationsmessungen\\
+				\rowcolor{lightgray}
+				\lstinline!vstep!& Zeitschritte zwischen Frames\\
+				\rowcolor{lightgray}
+				\lstinline!vframes!& Anzahl Frames\\
+				\lstinline!potential(x)!& reelles Potential ($V(x)$)\\
+				\lstinline!psi(x)=z!& Wellefunktion \lstinline!z={x,y}! ($\psi(x)$)\\
+				\rowcolor{lightgray}
+				\lstinline!energie(k)!& exakte Energien $\epsilon_k$\\
+				\lstinline!enrgrange!& betrachteten Energien\\
+				 & Min.,Max.,Suchfenster, Suchschranke\\
+				\lstinline!output!& \\
+				\lstinline!.dir!& Ausgebeverzeichnis\\
+				\lstinline!.apsi!& Werte von $\psi(x,t=0)$\\
+				\lstinline!.pot!& Werte von $V(x)$\\
+				\lstinline!.corr!& Werte von $c(t)$\\
+				\lstinline!.dftcorr!& Werte von $\mathcal{F}[cw](\epsilon)$ \\
+				\lstinline!.spectrum!& gefundene Peaks \\
+			\end{tabular}
+			
 			\includegraphics[scale=.62]{../simple/corr}
 			\includegraphics[scale=.62]{../simple/spektrum}
-			\begin{center}\pgfplotstabletypeset[
-				every head row/.style={
-					% as in the previous example, this patches the first row:
-					before row={\hline
-						\rowcolor{lightgray}
-						\multicolumn{2}{|>{\columncolor{lightgray}}c|}{Eigenenergien}\\
-						\rowcolor{lightgray}
-					},
-					after row={\hline},
-				},
-				columns/0/.style={column name=$\epsilon_\alpha$, column type={|c}},
-				columns/1/.style={column name=Amplitude, column type={|c|}},
-				every last row/.style={after row=\hline},
-			]{../simple/spectrum.dat}\end{center}
-			\lstinputlisting[language=Lua]{../simple.lua}
+			\begin{center}\input{../simple/spectrum.tex.inc}\end{center}
+			
+			Wie schon eingangs erwähnt, leidet die die benutzte Suchmethode an
+			der Diskretisierung, sodass sich im Ramen von $\nicefrac{2\pi}{\tau n}$
+			schwanken.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   	\subsection{Potentialkasten}
 			\includegraphics[scale=.62]{../square/init}
+			
 			Als nächstes versuche ich bekannte Erbgebnisse für einen
-			uendlich tiefen Potentialkasten näherungsweise zu reproduzieren.
-  		\small{\begin{tabular}{|c|c|c|c|c|c|} \hline
-				\multirow{2}{*}{Potential}  &
-					\multicolumn{5}{|c|}{$V(x)= a \left(\Theta(-L/2-x)+\Theta(-L/2+x)\right)$} \\
-				& \multicolumn{5}{|c|}{$a=10000, L=10$} \\ \hline
-				\multirow{2}{*}{Parameter}
-				& bins   & range      & steps   & runs  & dt \\
-				          & $8192$ & ${[-8:8]}$ & $10$    & $50k$ & $0.00001$ \\ \hline
-				Start- &
-					\multicolumn{5}{|c|}{\multirow{2}{*}{
-						$
-							\psi(x) = \mathrm{e}^{-\frac{x^2}{2}} \mathrm{e}^{i 4 x}
-						$
-					}} \\
-				Funktion &  \multicolumn{5}{|c|}{} \\\hline
-			\end{tabular}}
+			unendlich tiefen Potentialkasten näherungsweise zu reproduzieren.
+			Um verglichswerte der Numerov-Approximation zu erhalten, musste ich
+			das Potential auf $1000$ reduzieren, da ich sonst an die grenzen der
+			Genauigkeit des \lstinline!double! Datentyps stoßen würde.
+			
+			\lstinputlisting[language=Lua]{../square.lua}			
+
 			\includegraphics[scale=.62]{../square/corr}
 			\includegraphics[scale=.62]{../square/spektrum}
-			\begin{center}\pgfplotstabletypeset[
-				every head row/.style={
-					% as in the previous example, this patches the first row:
-					before row={\hline
-						\rowcolor{lightgray}
-						\multicolumn{2}{|>{\columncolor{lightgray}}c|}{Eigenenergien}\\
-						\rowcolor{lightgray}
-					},
-					after row={\hline},
-				},
-				columns/0/.style={column name=$\epsilon_\alpha$, column type={|c}},
-				columns/1/.style={column name=Amplitude, column type={|c|}},
-				every last row/.style={after row=\hline},
-			]{../square/spectrum.dat}\end{center}
-			\lstinputlisting[language=Lua]{../square.lua}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  	\subsection{Potentialkasten: Grundzustand}
-			\includegraphics[scale=.62]{../square1/init}
-			\includegraphics[scale=.62]{../square1/corr}
-			\includegraphics[scale=.62]{../square1/spektrum}
-			\begin{center}\pgfplotstabletypeset[
-				every head row/.style={
-					% as in the previous example, this patches the first row:
-					before row={\hline
-						\rowcolor{lightgray}
-						\multicolumn{2}{|>{\columncolor{lightgray}}c|}{Eigenenergien}\\
-						\rowcolor{lightgray}
-					},
-					after row={\hline},
-				},
-				columns/0/.style={column name=$\epsilon_\alpha$, column type={|c}},
-				columns/1/.style={column name=Amplitude, column type={|c|}},
-				every last row/.style={after row=\hline},
-			]{../square1/spectrum.dat}\end{center}
-			\lstinputlisting[language=Lua]{../square1.lua}
+			\begin{center}\input{../square/spectrum.tex.inc}\end{center}
+			
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   	\subsection{Harmonischer Oszillator}
 			\includegraphics[scale=.62]{../harmosca/init}
+			
+			\lstinputlisting[language=Lua]{../harmosca.lua}
+			
 			\includegraphics[scale=.62]{../harmosca/corr}
 			\includegraphics[scale=.62]{../harmosca/spektrum}
-			\begin{center}\pgfplotstabletypeset[
-				every head row/.style={
-					% as in the previous example, this patches the first row:
-					before row={\hline
-						\rowcolor{lightgray}
-						\multicolumn{2}{|>{\columncolor{lightgray}}c|}{Eigenenergien}\\
-						\rowcolor{lightgray}
-					},
-					after row={\hline},
-				},
-				columns/0/.style={column name=$\epsilon_\alpha$, column type={|c}},
-				columns/1/.style={column name=Amplitude, column type={|c|}},
-				every last row/.style={after row=\hline},
-			]{../harmosca/spectrum.dat}\end{center}
-			\lstinputlisting[language=Lua]{../harmosca.lua}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  	\subsection{Harmonischer Oszillator: Grundzustand}
-			\includegraphics[scale=.62]{../harmosc1/init}
-			\includegraphics[scale=.62]{../harmosc1/corr}
-			\includegraphics[scale=.62]{../harmosc1/spektrum}
-			\begin{center}\pgfplotstabletypeset[
-				every head row/.style={
-					% as in the previous example, this patches the first row:
-					before row={\hline
-						\rowcolor{lightgray}
-						\multicolumn{2}{|>{\columncolor{lightgray}}c|}{Eigenenergien}\\
-						\rowcolor{lightgray}
-					},
-					after row={\hline},
-				},
-				columns/0/.style={column name=$\epsilon_\alpha$, column type={|c}},
-				columns/1/.style={column name=Amplitude, column type={|c|}},
-				every last row/.style={after row=\hline},
-			]{../harmosc1/spectrum.dat}\end{center}
-			\lstinputlisting[language=Lua]{../harmosc1.lua}
+			\begin{center}\input{../harmosca/spectrum.tex.inc}\end{center}
 
+			
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	\begin{thebibliography}{}
@@ -598,5 +626,10 @@
 			\newblock{\url{
 				http://www.cambridge.org/resources/
 				0521854555/4421_Chapter\%2012\%20-\%20Discrete\%20Fourier\%20transform.pdf}}
+		\bibitem[SAPS]{SAPS}
+			\newblock{Girish Keshav Palshikar}
+			\newblock{\em{Simple Algorithms for Peak Detection in Time-Series}}
+			\newblock{\url{
+			http://www.tcs-trddc.com/trddc_website/pdf/SRL/Palshikar_SAPDTS_2009.pdf}}
 	\end{thebibliography}
 \end{document}

@@ -78,7 +78,6 @@ preferences_t * preferences_new() {
 void preferences_free(preferences_t * prefs) {
   free(prefs->xpos);
   free(prefs->potential);
-  free(prefs->theoenrg);
   free(prefs->psi);
 
   free(prefs->output.dir);
@@ -86,7 +85,6 @@ void preferences_free(preferences_t * prefs) {
   free(prefs->output.pot);
   free(prefs->output.corr);
   free(prefs->output.dftcorr);
-  free(prefs->output.theoenrg);
   free(prefs->output.spectrum);
 
   if (prefs->results) {
@@ -245,9 +243,6 @@ int preferences_read(lua_State * L, preferences_t * prefs)
     lua_getfield(L, tab, "dftcorr");
     if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.dftcorr undefined\n"); return -1; }
     prefs->output.dftcorr = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
-    lua_getfield(L, tab, "theoenrg");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.theoenrg undefined\n"); return -1; }
-    prefs->output.theoenrg = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
     lua_getfield(L, tab, "spectrum");
     if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.spectrum undefined\n"); return -1; }
     prefs->output.spectrum = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
@@ -259,7 +254,6 @@ int preferences_read(lua_State * L, preferences_t * prefs)
   printf("    pot:         %s/%s\n", prefs->output.dir, prefs->output.pot);
   printf("    corr:        %s/%s\n", prefs->output.dir, prefs->output.corr);
   printf("    dftcorr:     %s/%s\n", prefs->output.dir, prefs->output.dftcorr);
-  printf("    theoenrg:    %s/%s\n", prefs->output.dir, prefs->output.theoenrg);
   printf("    spectrum:    %s/%s\n", prefs->output.dir, prefs->output.spectrum);
 
   // number of steps
@@ -313,31 +307,6 @@ int preferences_read(lua_State * L, preferences_t * prefs)
   printf("  peak search window is %g\n", prefs->enrgrange.win);
   printf("  peak selector is %g sdev\n", prefs->enrgrange.sel);
 
-  // get at most 1000 theoretical energy values for spectrum plot
-  {
-    lua_getfield(L, config, "energy");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, energy undefined\n"); return -1; }
-    int energy = lua_gettop(L);
-
-    array_t * E = array_new_sized(0, 100);
-    double ek;
-    double lim = prefs->enrgrange.max;
-    int k = 0;
-
-    do {
-      lua_pushvalue(L, energy);
-      lua_pushnumber(L, k++);
-      lua_call(L, 1, 1);
-      assert(lua_isnumber(L, -1));
-      ek = lua_tonumber(L, -1);
-      lua_pop(L, 1);
-      E = array_append(E, ek);
-    } while (ek < lim && E->length < 1000);
-    lua_pop(L, 1);
-    prefs->theoenrg = E;
-  }
-  printf("    theoenrg(k)\n");
-
   printf("\n");
 
   // we are done, release config table
@@ -345,144 +314,6 @@ int preferences_read(lua_State * L, preferences_t * prefs)
   prefs->config = LUA_NOREF;
 
   return 0;
-}
-
-void preferences_serialize(preferences_t * prefs, FILE * fp)
-{
-#define WRITE_FIELD(_f) assert(fwrite(&prefs->_f, sizeof(prefs->_f), 1, fp) == 1)
-#define WRITE_STR(_f) \
-  do { \
-    size_t len = strlen(prefs->_f); \
-    assert(fwrite(&len, sizeof(len), 1, fp) == 1); \
-    assert(fwrite(prefs->_f, 1, len, fp) == len); \
-  } while(0)
-  WRITE_FIELD(bins);
-  WRITE_FIELD(dt);
-  WRITE_FIELD(range.min);
-  WRITE_FIELD(range.max);
-  WRITE_FIELD(steps);
-  WRITE_FIELD(runs);
-  WRITE_FIELD(vstep);
-  WRITE_FIELD(vframes);
-  WRITE_FIELD(xpos->length);
-  for (int k = 0; k < prefs->xpos->length; k++) {
-    WRITE_FIELD(xpos->data[k]);
-  }
-  WRITE_FIELD(potential->length);
-  for (int k = 0; k < prefs->potential->length; k++) {
-    WRITE_FIELD(potential->data[k]);
-  }
-  WRITE_FIELD(psi->length);
-  for (int k = 0; k < prefs->psi->length; k++) {
-    WRITE_FIELD(psi->data[k]);
-  }
-  WRITE_STR(output.dir);
-  WRITE_STR(output.apsi);
-  WRITE_STR(output.pot);
-  WRITE_STR(output.corr);
-  WRITE_STR(output.dftcorr);
-  WRITE_STR(output.theoenrg);
-  WRITE_STR(output.spectrum);
-  WRITE_FIELD(tsteps);
-  WRITE_FIELD(dx);
-  WRITE_FIELD(dk);
-  WRITE_FIELD(dE);
-  WRITE_FIELD(enrgrange.min);
-  WRITE_FIELD(enrgrange.max);
-  WRITE_FIELD(enrgrange.win);
-  WRITE_FIELD(enrgrange.sel);
-  WRITE_FIELD(theoenrg->length);
-  for (int k = 0; k < prefs->theoenrg->length; k++) {
-    WRITE_FIELD(theoenrg->data[k]);
-  }
-#undef WRITE_FIELD
-#undef WRITE_STR
-}
-
-void preferences_deserialize(preferences_t * prefs, FILE * fp)
-{
-#define READ_FIELD(_f) assert(fread(&prefs->_f, sizeof(prefs->_f), 1, fp) == 1)
-#define READ_STR(_f) \
-  do { \
-    size_t len; \
-    assert(fread(&len, sizeof(len), 1, fp) == 1); \
-    prefs->_f = malloc(len + 1); assert(prefs->_f); \
-    assert(fread(prefs->_f, 1, len, fp) == len); \
-    prefs->_f[len] = 0; \
-  } while(0)
-#define READ_ARRAY(_f, _new) \
-  do { \
-    int len; \
-    assert(fread(&len, sizeof(len), 1, fp) == 1); \
-    prefs->_f = _new(len); assert(prefs->_f); \
-    size_t sz = sizeof(prefs->_f->data[0]) * len; \
-    assert(fread(prefs->_f->data, 1, sz, fp) == sz); \
-  } while(0)
-  READ_FIELD(bins);
-  READ_FIELD(dt);
-  READ_FIELD(range.min);
-  READ_FIELD(range.max);
-  READ_FIELD(steps);
-  READ_FIELD(runs);
-  READ_FIELD(vstep);
-  READ_FIELD(vframes);
-  READ_ARRAY(xpos, array_new);
-  READ_ARRAY(potential, array_new);
-  READ_ARRAY(psi, carray_new);
-  READ_STR(output.dir);
-  READ_STR(output.apsi);
-  READ_STR(output.pot);
-  READ_STR(output.corr);
-  READ_STR(output.dftcorr);
-  READ_STR(output.theoenrg);
-  READ_STR(output.spectrum);
-  READ_FIELD(tsteps);
-  READ_FIELD(dx);
-  READ_FIELD(dk);
-  READ_FIELD(dE);
-  READ_FIELD(enrgrange.min);
-  READ_FIELD(enrgrange.max);
-  READ_FIELD(enrgrange.win);
-  READ_FIELD(enrgrange.sel);
-  READ_ARRAY(theoenrg, array_new);
-#undef READ_FIELD
-#undef READ_STR
-#undef READ_ARRAY
-
-  printf("configuration: \n");
-  printf("  bins:    %d\n", prefs->bins);
-  printf("  dt:      %g\n", prefs->dt);
-  printf("  range:   [%g;%g]\n", prefs->range.min, prefs->range.max);
-  printf("  steps:   %d\n", prefs->steps);
-  printf("  runs:    %d\n", prefs->runs);
-#ifdef USE_CAIRO
-  if (prefs->vstep > 0 && prefs->vframes > 0) {
-    printf("  will render video with:\n");
-    printf("    vstep:       %d\n", prefs->vstep);
-    printf("    vframes:     %d\n", prefs->vframes);
-  }
-#endif
-  printf("  potential(x)\n");
-  printf("  psi(x)\n");
-  printf("  output:\n");
-  printf("    dir:         %s\n", prefs->output.dir);
-  printf("    apsi:        %s/%s\n", prefs->output.dir, prefs->output.apsi);
-  printf("    pot:         %s/%s\n", prefs->output.dir, prefs->output.pot);
-  printf("    corr:        %s/%s\n", prefs->output.dir, prefs->output.corr);
-  printf("    dftcorr:     %s/%s\n", prefs->output.dir, prefs->output.dftcorr);
-  printf("    theoenrg:    %s/%s\n", prefs->output.dir, prefs->output.theoenrg);
-  printf("    spectrum:    %s/%s\n", prefs->output.dir, prefs->output.spectrum);
-  printf("  derrived values are:\n");
-  printf("    tsteps:      %d\n", prefs->tsteps);
-  printf("    dx:          %g\n", prefs->dx);
-  printf("    dk:          %g\n", prefs->dk);
-  printf("    dE:          %g\n", prefs->dE);
-  printf("  maximal energy detectable is %g\n", prefs->dE * prefs->runs / 2);
-  printf("  enrgrange [%g;%g]\n", prefs->enrgrange.min, prefs->enrgrange.max);
-  printf("  peak search window is %g\n", prefs->enrgrange.win);
-  printf("  peak selector is %g sdev\n", prefs->enrgrange.sel);
-  printf("    theoenrg(k)\n");
-  printf("\n");
 }
 
 /*! \memberof preferences
@@ -735,22 +566,9 @@ int eval_results(preferences_t * prefs)
     fclose(fp);
   }
 
-  // dump the theoretic energies
-  {
-    int len = strlen(prefs->output.dir) + strlen(prefs->output.theoenrg) + 10;
-    char path[len];
-    array_t * E = prefs->theoenrg;
-    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.theoenrg);
-    FILE * fp = fopen(path, "w"); assert(fp);
-    for (int k = 0; k < E->length; k++) {
-      fprintf(fp, "%d %.17e\n", k, E->data[k]);
-    }
-    fclose(fp);
-  }
-
   // dump spectrum
   {
-    int len = strlen(prefs->output.dir) + strlen(prefs->output.theoenrg) + 10;
+    int len = strlen(prefs->output.dir) + strlen(prefs->output.spectrum) + 10;
     char path[len];
     snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.spectrum);
     FILE * fp = fopen(path, "w"); assert(fp);
@@ -774,9 +592,9 @@ int eval_results(preferences_t * prefs)
     for (int k = 0; k < peaks->length; k++) {
       int i = peaks->data[k];
       if (i > 0 && i < data->length) {
-        double z = (i - ck->length/2.0) * dE;
+        double z = (i - ck->length/2.0 - .5) * dE;
         if (z >= prefs->enrgrange.min && z <= prefs->enrgrange.max) {
-          fprintf(fp, "%.17e %.17e\n", z, data->data[i]);
+          fprintf(fp, "%.17e\n", z);
         }
       }
     }

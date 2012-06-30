@@ -1,17 +1,16 @@
 local math = require("math")
 local complex = require("complex")
-local omega = 40;
 local L = 10
 local exp = math.exp
-local sin = math.sin
-local sqrt = math.sqrt
 local cexp = complex.exp
 local pi = math.pi
+local sqrt = math.sqrt
+local sin = math.sin
 
 config = {
-  bins = 4096*2;  dt = 0.0001;
-  range = {-10,20};
-  steps = 10; runs = 100000;
+  bins = 4096;  dt = 0.0001;
+  range = {-5,15};
+  steps = 10; runs = 50000;
   vstep = 100; vframes = 200;
   --
   potential = function(x)
@@ -28,17 +27,17 @@ config = {
       return  {0,0}
     end
   end;
-  energy = function(k)
+  energy = function(r)
+    local k = r + 1
     return pi^2 * k^2/L^2
   end;
-  enrgrange = {0, 4, 6, 3};
+  enrgrange = {0, 1, 8, 2};
   output = {
     dir = "./square1";
     apsi = "apsi.dat";
     pot = "pot.dat";
     corr = "corr.dat";
     dftcorr = "dftcorr.dat";
-    theoenrg = "theoenrg.dat";
     spectrum = "spectrum.dat";
   };
 }

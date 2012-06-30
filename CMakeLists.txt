@@ -4,16 +4,20 @@ project(projekt)
 include(FindPkgConfig)
 find_package(Doxygen REQUIRED)
 find_program(FFMPEG ffmpeg)
-find_program(GNUPLOT gnuplot)
-find_program(PDFLATEX pdflatex)
+find_program(GNUPLOT gnuplot REQUIRED)
+find_program(PDFLATEX pdflatex REQUIRED)
+find_program(LUA lua REQUIRED)
+
+set(BADNESS
+  "badness"
+)
 
 set(PRESETS
-  "badness"
   "simple"
   "square"
   "square1"
   "harmosca"
-  "harmosc1"
+  ${BADNESS}
 )
 
 #set(CMAKE_VERBOSE_MAKEFILE true)
@@ -86,11 +90,6 @@ set_target_properties(simulate PROPERTIES COMPILE_FLAGS ${CFLAGS})
 set_target_properties(simulate PROPERTIES LINK_FLAGS ${LFLAGS})
 target_link_libraries(simulate ${PKG_LIBRARIES} fftw3_threads m projekt)
 
-add_executable(compile ${projekt_SOURCE_DIR}/compile.c)
-set_target_properties(compile PROPERTIES COMPILE_FLAGS ${CFLAGS})
-set_target_properties(compile PROPERTIES LINK_FLAGS ${LFLAGS})
-target_link_libraries(compile ${PKG_LIBRARIES} fftw3_threads m projekt)
-
 add_executable(evaluate ${projekt_SOURCE_DIR}/evaluate.c)
 set_target_properties(evaluate PROPERTIES COMPILE_FLAGS ${CFLAGS})
 set_target_properties(evaluate PROPERTIES LINK_FLAGS ${LFLAGS})
@@ -111,25 +110,13 @@ foreach(PRESET ${PRESETS})
 
   add_custom_command(
     OUTPUT
-      "${projekt_SOURCE_DIR}/${PRESET}/config.ser"
-    COMMAND
-      mkdir -p "${projekt_SOURCE_DIR}/${PRESET}"
-    COMMAND
-      $<TARGET_FILE:compile>
-        "${projekt_SOURCE_DIR}/${PRESET}.lua"
-        "${projekt_SOURCE_DIR}/${PRESET}/config.ser"
-    MAIN_DEPENDENCY
-      "${projekt_SOURCE_DIR}/${PRESET}.lua")
-
-  add_custom_command(
-    OUTPUT
       "${projekt_SOURCE_DIR}/${PRESET}/result.dat"
     COMMAND
       $<TARGET_FILE:simulate>
-        "${projekt_SOURCE_DIR}/${PRESET}/config.ser"
+        "${projekt_SOURCE_DIR}/${PRESET}.lua"
         "${projekt_SOURCE_DIR}/${PRESET}/result.dat"
     MAIN_DEPENDENCY
-      "${projekt_SOURCE_DIR}/${PRESET}/config.ser")
+      "${projekt_SOURCE_DIR}/${PRESET}.lua")
 
   if(${CAIRO_FOUND})
     add_custom_command(
@@ -138,16 +125,16 @@ foreach(PRESET ${PRESETS})
         "${projekt_SOURCE_DIR}/${PRESET}/corr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/theoenrg.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
+        "${projekt_SOURCE_DIR}/${PRESET}/numen.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/stats"
         "${projekt_SOURCE_DIR}/${PRESET}/video/image00000.png"
       COMMAND
         $<TARGET_FILE:evaluate>
-          "${projekt_SOURCE_DIR}/${PRESET}/config.ser"
+          "${projekt_SOURCE_DIR}/${PRESET}.lua"
           "${projekt_SOURCE_DIR}/${PRESET}/result.dat"
       MAIN_DEPENDENCY
-        "${projekt_SOURCE_DIR}/${PRESET}/config.ser"
+        "${projekt_SOURCE_DIR}/${PRESET}.lua"
         "${projekt_SOURCE_DIR}/${PRESET}/result.dat")
   else()
     add_custom_command(
@@ -157,30 +144,34 @@ foreach(PRESET ${PRESETS})
         "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/theoenrg.dat"
+        "${projekt_SOURCE_DIR}/${PRESET}/numen.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/stats"
       COMMAND
         $<TARGET_FILE:evaluate>
-          "${projekt_SOURCE_DIR}/${PRESET}/config.ser"
+          "${projekt_SOURCE_DIR}/${PRESET}.lua"
           "${projekt_SOURCE_DIR}/${PRESET}/result.dat"
       MAIN_DEPENDENCY
-        "${projekt_SOURCE_DIR}/${PRESET}/config.ser"
+        "${projekt_SOURCE_DIR}/${PRESET}.lua"
         "${projekt_SOURCE_DIR}/${PRESET}/result.dat")
   endif()
 
   set(CONFS ${CONFS} "${projekt_SOURCE_DIR}/${PRESET}.lua")
 
-#  add_custom_command(
-#    OUTPUT
-#      "${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc"
-#    COMMAND
-#      $<TARGET_FILE:tabgen> "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
-#        >"${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc"
-#    MAIN_DEPENDENCY
-#      "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat")
+  add_custom_command(
+    OUTPUT
+      "${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc"
+    COMMAND
+      ${LUA} "${projekt_SOURCE_DIR}/tabgen.lua"
+        "${projekt_SOURCE_DIR}/${PRESET}.lua"
+        "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
+        "${projekt_SOURCE_DIR}/${PRESET}/numen.dat"
+        >"${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc"
+    MAIN_DEPENDENCY
+      "${projekt_SOURCE_DIR}/tabgen.lua"
+      "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
+      "${projekt_SOURCE_DIR}/${PRESET}/numen.dat")
 
-#  set(SPECTRA ${SPECTRA} "${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc")
-  set(SPECTRA ${SPECTRA} "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat")
+  set(SPECTRA ${SPECTRA} "${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc")
 
   if(${CAIRO_FOUND})
     add_custom_command(
@@ -229,21 +220,22 @@ foreach(PRESET ${PRESETS})
       "${projekt_SOURCE_DIR}/${PRESET}/"
     DEPENDS
       "${projekt_SOURCE_DIR}/spektrum.gp"
-      "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
-      "${projekt_SOURCE_DIR}/${PRESET}/theoenrg.dat")
+      "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat")
 
 ###########################################################################
 
   if(${CAIRO_FOUND})
     add_custom_target(${PRESET}
       DEPENDS
+        "${projekt_SOURCE_DIR}/${PRESET}.lua"
         "${projekt_SOURCE_DIR}/${PRESET}/apsi.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/corr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/theoenrg.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/movie.webm"
+        "${projekt_SOURCE_DIR}/${PRESET}/numen.dat"
+        "${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc"
 
         "${projekt_SOURCE_DIR}/${PRESET}/init.pdf"
         "${projekt_SOURCE_DIR}/${PRESET}/corr.pdf"
@@ -256,8 +248,9 @@ foreach(PRESET ${PRESETS})
         "${projekt_SOURCE_DIR}/${PRESET}/corr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/theoenrg.dat"
         "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
+        "${projekt_SOURCE_DIR}/${PRESET}/numen.dat"
+        "${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc"
 
         "${projekt_SOURCE_DIR}/${PRESET}/init.pdf"
         "${projekt_SOURCE_DIR}/${PRESET}/corr.pdf"
@@ -267,6 +260,27 @@ foreach(PRESET ${PRESETS})
     "${projekt_SOURCE_DIR}/${PRESET}/init.pdf"
     "${projekt_SOURCE_DIR}/${PRESET}/corr.pdf"
     "${projekt_SOURCE_DIR}/${PRESET}/spektrum.pdf")
+endforeach()
+
+foreach(BAD ${BADNESS})
+  message("adding ${BAD}")
+
+  add_custom_command(
+    OUTPUT
+      "${projekt_SOURCE_DIR}/${BAD}/bspektrum.pdf"
+    COMMAND
+      ${GNUPLOT} "${projekt_SOURCE_DIR}/bspektrum.gp"
+    WORKING_DIRECTORY
+      "${projekt_SOURCE_DIR}/${BAD}/"
+    DEPENDS
+      "${projekt_SOURCE_DIR}/bspektrum.gp"
+      "${projekt_SOURCE_DIR}/${BAD}/dftcorr.dat"
+      "${projekt_SOURCE_DIR}/${BAD}/spectrum.dat"
+      "${projekt_SOURCE_DIR}/${BAD}/numen.dat")
+  set(PLOTS ${PLOTS} "${projekt_SOURCE_DIR}/${BAD}/bspektrum.pdf")
+  set(BDEP
+    ${BDEP} "${projekt_SOURCE_DIR}/${BAD}/bspektrum.pdf"
+    "${projekt_SOURCE_DIR}/${BAD}/spectrum.tex.inc")
 endforeach()
 
 add_custom_command(
@@ -284,17 +298,24 @@ add_custom_command(
   OUTPUT
     "${projekt_SOURCE_DIR}/doc/projekt3.pdf"
   COMMAND
+    echo "remove the comments for release!!!!"
+  COMMAND
+    sleep 1
+  COMMAND
     ${PDFLATEX} "${projekt_SOURCE_DIR}/doc/projekt3.tex"
   WORKING_DIRECTORY
     "${projekt_SOURCE_DIR}/doc"
   DEPENDS
     "${projekt_SOURCE_DIR}/doc/projekt3.tex"
-    ${PLOTS}
+    #${PLOTS}
     ${SPECTRA}
     ${CONFS}
   COMMENT
     "Generating LaTeX doc"
   VERBATIM)
+
+add_custom_target(bad
+  DEPENDS ${BDEP})
 
 add_custom_target(doc
   DEPENDS

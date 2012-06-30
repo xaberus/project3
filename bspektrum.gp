@@ -46,7 +46,7 @@ set autoscale  y
 set logscale y
 
 plot \
-  "dftcorr.dat" using 1:4 axis x1y1 with lines linestyle 3 title "|F[cw](eps)|", \
-  "spectrum.dat" using 1:(0.05) axis x1y2 with points pointsize .3 title "Peaks", \
-  "numen.dat" using 1:(.01) axis x1y2 with points pointsize .3 title "Numerov";
+  "dftcorr.dat" using 1:4 axis x1y1 with lines linestyle 3 title "|F[c(t)](eps)|", \
+  "spectrum.dat" using 1:(1) axis x1y2 with impulses title "Peaks", \
+  "numen.dat" using 1:(1) axis x1y2 with impulses title "Numerov";
 

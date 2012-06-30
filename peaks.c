@@ -120,9 +120,6 @@ array_t * peaks_find(array_t * data, int swindow, double h)
   array_t * a = array_new(length);
 
   for (int k = 0; k < length; k++) {
-    /*double N1[swindow * 2 + w + 1], N2[swindow * 2 + w + 2];
-    peek_data(length, data->data, k, swindow, w, N1, N2);
-    double r = entropy_cmpare(swindow, w, N1, N2);*/
     double r = max_cmpare(data, k, swindow);
     a->data[k] = r > 0 ? r : 0;
   }

@@ -1,12 +1,13 @@
 local math = require("math")
 local complex = require("complex")
-local omega = 6;
+local omega = 5;
 local exp = math.exp
 local sqrt = math.sqrt
+local pi = math.pi
 
 config = {
-  bins = 4096*2; dt = 0.0001;
-  range = {-20,20};
+  bins = 4096; dt = 1 / (1000 * pi);
+  range = {-15,15};
   steps = 10; runs = 50000;
   vstep = 100; vframes = 200;
   --
@@ -24,14 +25,13 @@ config = {
   energy = function(k)
     return omega * (.5 + k)
   end;
-  enrgrange = {0, 200, 6, 1.1};
+  enrgrange = {0, 200, 6, 1};
   output = {
     dir = "./harmosca";
     apsi = "apsi.dat";
     pot = "pot.dat";
     corr = "corr.dat";
     dftcorr = "dftcorr.dat";
-    theoenrg = "theoenrg.dat";
     spectrum = "spectrum.dat";
   };
 }

@@ -42,23 +42,38 @@ int main(int argc, char * argv[argc])
   fftw_plan_with_nthreads(4);
 
   if (argc != 3) {
-    fprintf(stderr, "usage: %s config.ser results.dat\n", argv[0]);
+    fprintf(stderr, "usage: %s config.lua result.dat\n", argv[0]);
     return -1;
   }
 
+  lua_State * L = luaL_newstate();
+  luaL_openlibs(L);
+
   preferences_t * prefs = preferences_new();
 
-  FILE * fp = fopen(argv[1], "rb"); assert(fp);
-  preferences_deserialize(prefs, fp);
-  fclose(fp);
+  if (luaL_dofile(L, argv[1])) {
+    fprintf(stderr, "could not load '%s' : %s\n", argv[1], lua_tostring(L, 1));
+  } else {
+    // get config table
+    lua_getfield(L, LUA_GLOBALSINDEX, "config");
+    if (lua_isnil(L, -1)) {
+      fprintf(stderr, "table config undefined\n");
+    } else {
+      // ref config table, so we can access it in preferences_read()
+      prefs->config = luaL_ref(L, LUA_REGISTRYINDEX);
+      if (!preferences_read(L, prefs)) {
+        FILE * fp = fopen(argv[2], "rb"); assert(fp);
+        undump_results(prefs, fp);
+        fclose(fp);
 
-  fp = fopen(argv[2], "rb"); assert(fp);
-  undump_results(prefs, fp);
-  fclose(fp);
-
-  eval_results(prefs);
+        eval_results(prefs);
+      }
+    }
+  }
 
   preferences_free(prefs);
+
+  lua_close(L);
 
   fftw_cleanup();
   fftw_cleanup_threads();

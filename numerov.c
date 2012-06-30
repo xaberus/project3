@@ -45,11 +45,20 @@ double numerov_integrate(double E, void * arg)
   double hh = num->h * num->h;
   int k, p;
   for (k = 2, p = 0; k < length; k++, p++) {
+#if 0
     double f1 = psi[p % 3], f2 = psi[(p + 1) % 3];
     double s2 = 2 * (1 - 5 * hh / 12 * (E - V[k - 1])) * f2;
     double s1 = (1 + hh / 12 * (E - V[k - 2])) * f1;
     double d = (1 + hh / 12 * (E - V[k]));
     psi[(p + 2) % 3] = (s2 - s1) / d;
+#else
+    double f1 = psi[p % 3], f2 = psi[(p + 1) % 3];
+    double k1 = E - V[k - 2];
+    double k2 = E - V[k - 1];
+    double c3 = 1.0 / (12.0 + hh * (E - V[k]));
+
+    psi[(p + 2) % 3] = (-(12.0 * f1) + (24.0 * f2) - (f1 * hh * k1) - (10.0 * f2 * hh * k2)) * c3;
+#endif
   }
   return psi[(p + 2) % 3];
 }
@@ -57,24 +66,41 @@ double numerov_integrate(double E, void * arg)
 /* newton: secant method
  * seek for zero in the intervall, with wt most one change of sign of first derrivative of fn */
 double search_zero(double (*fn)(double, void*), void * arg, double min, double step, double max, double fmax) {
-  double xm = min, x = xm + step, xp;
-  int k;
+  //printf("searching in: [%.17g;%.17g]:%.17g ~ %.17g\n", min, max, step, fmax);
+  double xm, x, xp, a, b, f, fm, df;
+  int k, retry = 0;
+again:
+  xm = min, x = xm + step, xp, a, b;
   for (k = 0; x >= min && x <= max && k < maximal_iterations; k++) {
-    double f = fn(x, arg)/fmax;
-    double fm = fn(xm, arg)/fmax;
-    double df = (f-fm);
+    f = fn(x, arg)/fmax;
+    fm = fn(xm, arg)/fmax;
+    df = (f-fm);
     if (df == 0.0) { // worst case scenario....
-      df = 10e-17;
+      //printf("bisect (zero)\n");
+      if (!retry) {
+        step = step / 2.0;
+      }
+      goto bisect;
     }
     //printf("->sz: {%.17g, %.17g, %.17g, %.17g}\n", f, fm, xm, x);
     xp = x - (x - xm)/df*f;
     //printf("sz: [%.17g;%.17g]:%.17g {%.17g, %.17g, %.17g}\n", min, max, step, xm, x, xp);
     //printf("sz: [%g,%g]:%g {%g, %g, %g}\n", min, max, step, xm, x, xp);
     if (xp > max || xp < min) {
+      //printf("bisect (range)\n");
+      goto bisect;
+    }
+    if (x == xp) {
+      return x;
+    }
+    xm = x;
+    x = xp;
+    continue;
+bisect:
       // wenn wir hier landen, dann war x zu nah an einem Extrempunkt, versuche einen besseren
       // Startwert mit Bisektionsverfahren zu finden
-      double a = fn(min, arg)/fmax;
-      double b = fn(max, arg)/fmax;
+      a = fn(min, arg)/fmax;
+      b = fn(max, arg)/fmax;
       if (a * b < 0) {
         double t = (min + max)/2;
         double w = fn(t, arg)/fmax;
@@ -91,19 +117,20 @@ double search_zero(double (*fn)(double, void*), void * arg, double min, double s
         continue;
       }
       break;
-    }
-    if (x == xp) {
-      return x;
-    }
-    xm = x;
-    x = xp;
   }
+  if (!retry) {
+    /* enter _desperate_ mode... */
+    retry = 1;
+    step = step/2.0;
+    goto again;
+  }
+  printf("found no zero in: [%.17g;%.17g]:%.17g ~ %.17g\n", min, max, step, fmax);
   return 0.0/0.0; // nan - nichts gefunden
 }
 
 double getmaxabs(array_t * fn, int start, int end)
 {
-  double max = -1/0.0;
+  double max = 0.0;
   double * f = fn->data;
   for (int k = start; k < end; k++) {
     double z = fabs(*(f++));
@@ -132,12 +159,12 @@ array_t * numerov_energies(preferences_t * prefs)
 
   array_t * sc = search_der_sign_change_3(Epos->data[1] - Epos->data[0], fn, 0, 0, 0);
 
-  array_dump_to_file("score", " ", 2, Epos, fn);
+  /*array_dump_to_file("score", " ", 2, Epos, fn);
   FILE * fp = fopen("sumo", "w");
   for (int k = 0; k < sc->length - 1; k++) {
     fprintf(fp, "%g\n", Epos->data[(int)sc->data[k]]);
   }
-  fclose(fp);
+  fclose(fp);*/
 
   if (sc->length > 0) {
     // we have changes of sign at sc[n], between each we must seek for zeros
