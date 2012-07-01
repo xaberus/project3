@@ -298,16 +298,12 @@ add_custom_command(
   OUTPUT
     "${projekt_SOURCE_DIR}/doc/projekt3.pdf"
   COMMAND
-    echo "remove the comments for release!!!!"
-  COMMAND
-    sleep 1
-  COMMAND
     ${PDFLATEX} "${projekt_SOURCE_DIR}/doc/projekt3.tex"
   WORKING_DIRECTORY
     "${projekt_SOURCE_DIR}/doc"
   DEPENDS
     "${projekt_SOURCE_DIR}/doc/projekt3.tex"
-    #${PLOTS}
+    ${PLOTS}
     ${SPECTRA}
     ${CONFS}
   COMMENT
