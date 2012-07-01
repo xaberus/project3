@@ -1,7 +1,7 @@
 project3
 ========
 
-This are the sources for projekt number 3 for computational physics course I am participating.
+These are the sources for projekt number 3 for computational physics course I am participating.
 The purpose of this project is to appoximate solutions to the time dependant Schrödinger-equation
 and retreive a spectrum of stationary energy eigenvalues by calculating the autocorrlation
     (psi|U(t)|psi)
