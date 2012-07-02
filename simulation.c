@@ -581,18 +581,50 @@ int eval_results(preferences_t * prefs)
     int length = ck->length, o = 0;
     int * index = malloc(sizeof(int) * length); assert(index);
 
-    /* create a map to place negative energies in the richt place */
+    /* create a map to place negative energies in the right place */
     for (int k = ck->length/2; k < ck->length; k++) { index[o++] = k; }
     for (int k = 0; k < ck->length/2; k++) { index[o++] = k; }
 
     array_t * data = carray_abs(ck, index);
     array_t * logdat = array_map(data, log);
-    array_t * peaks = peaks_find(logdat, 6, prefs->enrgrange.sel);
+    array_t * peaks = peaks_find(prefs->dE, logdat, prefs->enrgrange.win, prefs->enrgrange.sel);
 
+    {
+      int m = prefs->enrgrange.min / dE + .5 + length/2.;
+      int M = prefs->enrgrange.max / dE + .5 + length/2.;
+
+      assert(M < length && m >= 0 && m < M);
+
+      array_t * s = array_new(M - m + 1);
+      array_t * f = array_new(s->length);
+      for (int k = 0; k < s->length; k++) {
+        s->data[k] = (m + k - ck->length/2.0) * dE;
+        f->data[k] = logdat->data[m + k];
+      }
+      array_t * a = array_cspline_prepare(f, prefs->dE);
+      array_t * x = array_equipart(prefs->enrgrange.min, prefs->enrgrange.max, s->length * 7);
+      array_t * p = array_cspline_interpolate(x, s, f, a, prefs->dE);
+      array_dump_to_file("spl", " ", 2, x, p);
+      array_dump_to_file("src", " ", 2, s, f);
+
+      array_t * d = array_cspline_zroots(s, f, a, prefs->dE);
+      array_dump_to_file("smo", " ", 2, s, d);
+
+      array_t * dl = array_cspline_dinterpolate(x, s, f, a, prefs->dE);
+      array_dump_to_file("smc", " ", 2, x, dl);
+
+      free(s);
+      free(f);
+      free(a);
+      free(x);
+      free(p);
+    }
+
+    printf("-------- %d\n", data->length);
     for (int k = 0; k < peaks->length; k++) {
       int i = peaks->data[k];
       if (i > 0 && i < data->length) {
-        double z = (i - ck->length/2.0 - .5) * dE;
+        double z = (i - data->length/2.) * dE;
         if (z >= prefs->enrgrange.min && z <= prefs->enrgrange.max) {
           fprintf(fp, "%.17e\n", z);
         }

@@ -26,6 +26,6 @@
 
 #include "array.h"
 
-array_t * peaks_find(array_t * data, int swindow, double h);
+array_t * peaks_find(double delta, array_t * data, int swindow, double h);
 
 #endif /* _PEAKS_H_ */

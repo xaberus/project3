@@ -217,3 +217,179 @@ void array_dump_to_file(const char name[], const char sep[], int argc, ...)
     fclose(fp);
   }
 }
+
+/*! \memberof array
+ prepare cubic spline interpolation by calculating the a[i]'s */
+array_t * array_cspline_prepare(array_t * f, double h)
+{
+  int k;
+  int length = f->length;
+  // because the matrix is symmetic and the subdiagonals are never touched by the
+  // calculation only two new vectors are needed: diag and b
+
+  // create and initialize matrix diagonal
+  array_t * diag = array_new(length - 2);
+  for (k = 0; k < diag->length; k++) { diag->data[k] = 4 * h; }
+
+  // create and initialize value vector
+  array_t * b = array_new(diag->length);
+  for (k = 0; k < b->length; k++) {
+    double f1 = f->data[k];
+    double f2 = f->data[k + 1];
+    double f3 = f->data[k + 2];
+    b->data[k] = 6 * ((f3 - f2) / h - (f2 - f1) / h);
+  }
+
+  // calculate the new diagonal of the twodiagonal matrix
+  for (k = 1 /* ! */; k < b->length; k++) {
+    double dd = diag->data[k - 1];
+    diag->data[k] += - h * h / dd;
+    double tt = b->data[k - 1];
+    b->data[k] += - h * tt / dd;
+  }
+
+  // this will be the coefficients vector
+  array_t * a = array_new(length);
+
+  // natural cspline boundary condition
+  a->data[0] = 0;
+  a->data[a->length - 1] = 0;
+
+  // calculate the rest of a[i]
+  for (k = b->length - 1; k >= 0; k--) {
+    a->data[k + 1] = (b->data[k] - h *  a->data[k + 2]) / diag->data[k];
+  }
+
+  // dispose of garbage
+  free(diag);
+  free(b);
+
+  return a;
+}
+
+/*! \memberof array
+ takes a partition and returns i so, that z is in [v[i],v[i+1]]
+ or -1 if no such i exsists */
+int array_getmaxindex(array_t * v, double z)
+{
+  int k;
+  if (z >= v->data[0]) {
+    for (k = 0; k < v->length; k++) {
+      if (v->data[k + 1] >= z) {
+        return k;
+      }
+    }
+  }
+  return -1;
+}
+
+/*! \memberof array
+ returns a vector of interpolated values of f for points in x */
+array_t * array_cspline_interpolate(array_t * x, array_t * s, array_t * f, array_t * a, double h)
+{
+  int k;
+  array_t * p = array_new(x->length);
+  for (k = 0; k < x->length; k++) {
+    double z = x->data[k];
+    int idx = array_getmaxindex(s, z);
+    if (idx >= 0) {
+      double dt1 = (z - s->data[idx]);
+      double dt2 = (z - s->data[idx + 1]);
+      double a1 = a->data[idx];
+      double a2 = a->data[idx + 1];
+      p->data[k] =
+        (dt1 * dt1 * dt1 * a2 - dt2 * dt2 * dt2 * a1) / ( 6 * h)
+        + dt1 * (f->data[idx + 1] / h - h * a2 / 6)
+        + dt2 * (h * a1 / 6 - f->data[idx] / h);
+    } else {
+      p->data[k] = 0;
+    }
+  }
+
+  return p;
+}
+
+/*! \memberof array
+ returns a interpolated value of f for point \a z */
+double array_cspline_interpolate1(double z, array_t * s, array_t * f, array_t * a, double h)
+{
+  int idx = array_getmaxindex(s, z);
+  if (idx >= 0) {
+    double dt1 = (z - s->data[idx]);
+    double dt2 = (z - s->data[idx + 1]);
+    double a1 = a->data[idx];
+    double a2 = a->data[idx + 1];
+    return
+      (dt1 * dt1 * dt1 * a2 - dt2 * dt2 * dt2 * a1) / ( 6 * h)
+      + dt1 * (f->data[idx + 1] / h - h * a2 / 6)
+      + dt2 * (h * a1 / 6 - f->data[idx] / h);
+  }
+  return 0;
+}
+/*! \memberof array
+ returns a vector of interpolated values of f for points in x */
+array_t * array_cspline_dinterpolate(array_t * x, array_t * s, array_t * f, array_t * a, double h)
+{
+  int k;
+  array_t * p = array_new(x->length);
+  for (k = 0; k < x->length; k++) {
+    double z = x->data[k];
+    int idx = array_getmaxindex(s, z);
+    if (idx >= 0) {
+      double s1 = s->data[idx];
+      double s2 = s->data[idx + 1];
+      double f1 = f->data[idx];
+      double f2 = f->data[idx + 1];
+      double a1 = a->data[idx];
+      double a2 = a->data[idx + 1];
+      double d1 = z - s1;
+      double d2 = z - s2;
+      p->data[k] = (-(a2*(pow(h,2) - 3*pow(d1,2))) + a1*(pow(h,2) - 3*pow(d2,2)) - 6*f1 + 6*f2)/(6.*h);
+    } else {
+      p->data[k] = 0;
+    }
+  }
+
+  return p;
+}
+
+/*! \memberof array
+ returns zero roots */
+array_t * array_cspline_zroots(array_t * s, array_t * f, array_t * a, double h)
+{
+  printf("##### %d %d\n", a->length, s->length);
+  array_t * p = array_new(s->length);
+  for (int k = 0; k < s->length; k++) {
+    double z = s->data[k];
+    int idx = k > 0 ? k - 1 : 0;
+    double s1 = s->data[idx];
+    double s2 = s->data[idx + 1];
+    double f1 = f->data[idx];
+    double f2 = f->data[idx + 1];
+    double a1 = a->data[idx];
+    double a2 = a->data[idx + 1];
+    double r =
+    /*p->data[k] =
+      (pow(z - s1, 3) * a2 - pow(z - s2, 3) * a1) / ( 6 * h)
+      + (z - s1) * (f->data[idx + 1] / h - h * a2 / 6)
+      + (z - s2) * (h * a1 / 6 - f->data[idx] / h);*/
+      pow(6*a2*s1 - 6*a1*s2,2) + 12*(a1 - a2)*(-6*f1 + 6*f2 - a2*(pow(h,2) - 3*pow(s1,2)) + a1*(pow(h,2) - 3*pow(s2,2)));
+    if (r >= 0) {
+      double xp = (sqrt(r) + 6*a2*s1 - 6*a1*s2)/(6.*(a1 + a2));
+      double xm = (sqrt(r) - 6*a2*s1 + 6*a1*s2)/(6.*(a1 - a2));
+      if (xm >= s1 && xm <= s2) {
+        printf("--- %g :: %g %g\n", z, xm, xp);
+        p->data[k] = xm;
+      } else if (xp >= s1 && xp <= s2) {
+        printf("+++ %g :: %g %g\n", z, xm, xp);
+        p->data[k] = xp;
+      } else {
+        p->data[k] = 0.0/0.0;
+      }
+    } else {
+      p->data[k] = 0.0/0.0;
+    }
+  }
+
+  return p;
+}

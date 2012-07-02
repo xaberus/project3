@@ -111,9 +111,10 @@ int cmp_double(const void * a, const void * b)
 /*! this function searches for peaks in dataset \a data using
  the 3-point-rule for picking and standard deviation for selecting
  the peaks */
-array_t * peaks_find(array_t * data, int swindow, double h)
+array_t * peaks_find(double delta, array_t * data, int swindow, double h)
 {
   int length = data->length;
+  (void) delta;
 
   array_t * out = array_new(0);
   array_t * ret = array_new(0);
