@@ -91,8 +91,9 @@ void peak_erase(array_t * a, int i, int k)
   if (m >= a->length) { ie = a->length - 1; } else { ie = m; }
 
   for (int p = is; p < ie; p++) {
-    double x = fabs(p - i);
-    a->data[p] *= exp(-k/x);
+    //double x = fabs(p - i);
+    //a->data[p] *= exp(-k/x);
+    a->data[p] = 1.0/0.0;
   }
 }
 

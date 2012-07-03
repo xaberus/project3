@@ -414,7 +414,7 @@ int start_simulation(preferences_t * prefs)
   printf("  done...                 \n");
 
   printf("  hanning before dft\n");
-  // Hann Fenster:
+  // von Hann Fenster:
   double hannfkt = 2 * M_PI/(length);
   for (int k = 0; k < length; k++) {
     complex double z = c->data[k];
@@ -425,7 +425,7 @@ int start_simulation(preferences_t * prefs)
   fftw_execute_dft(p, c->data, ck->data);
   printf("  calculated dft\n");
 
-  // normalize spectrum, as fftw wil not do this
+  // normalize spectrum, as fftw will not do this
   double nor = 1/sqrt(length);
   for (int k = 0; k < length; k++) { ck->data[k] *= nor; }
 
@@ -589,6 +589,8 @@ int eval_results(preferences_t * prefs)
     array_t * logdat = array_map(data, log);
     array_t * peaks = peaks_find(prefs->dE, logdat, prefs->enrgrange.win, prefs->enrgrange.sel);
 
+    int odd = (length%2);
+
     {
       int m = prefs->enrgrange.min / dE + .5 + length/2.;
       int M = prefs->enrgrange.max / dE + .5 + length/2.;
@@ -598,7 +600,7 @@ int eval_results(preferences_t * prefs)
       array_t * s = array_new(M - m + 1);
       array_t * f = array_new(s->length);
       for (int k = 0; k < s->length; k++) {
-        s->data[k] = (m + k - ck->length/2.0) * dE;
+        s->data[k] = (m + k - ck->length/2 - odd) * dE;
         f->data[k] = logdat->data[m + k];
       }
       array_t * a = array_cspline_prepare(f, prefs->dE);
@@ -624,7 +626,7 @@ int eval_results(preferences_t * prefs)
     for (int k = 0; k < peaks->length; k++) {
       int i = peaks->data[k];
       if (i > 0 && i < data->length) {
-        double z = (i - data->length/2.) * dE;
+        double z = (i - data->length/2 - odd) * dE;
         if (z >= prefs->enrgrange.min && z <= prefs->enrgrange.max) {
           fprintf(fp, "%.17e\n", z);
         }
