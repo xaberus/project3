@@ -27,7 +27,7 @@
 #include "simulation.h"
 #include "numerov.h"
 
-int maximal_iterations = 1000;
+int maximal_iterations = 5000;
 
 typedef struct {
   array_t * V;
@@ -60,21 +60,26 @@ double numerov_integrate(double E, void * arg)
   return (double) psi2;
 }
 
+FILE * logg = NULL;
+
 /* newton: secant method
  * seek for zero in the intervall, with wt most one change of sign of first derrivative of fn */
 double search_zero(double (*fn)(double, void*), void * arg, double min, double step, double max, double fmax) {
-  printf("searching in: [%.17g:%.17g] : %.17g ~ %.17g\n", min, max, step, fmax);
+  //printf("searching in: [%.17g:%.17g] : %.17g ~ %.17g\n", min, max, step, fmax);
   double xm, x, xp, a, b, f, fm, df;
   double pp = (max - min) / step;
   int k;
   xm = min, x = xm + step, xp, a, b;
 
   for (k = 0; x >= min && x <= max && k < maximal_iterations; k++) {
+    if (xm == x) {
+      return x;
+    }
     f = fn(x, arg)/fmax;
     fm = fn(xm, arg)/fmax;
     df = (f-fm);
     if (df == 0.0) { // worst case scenario....
-      printf("bisect (zero)\n");
+      //printf("bisect (zero)\n");
       goto bisect;
     }
 
@@ -82,9 +87,11 @@ double search_zero(double (*fn)(double, void*), void * arg, double min, double s
     xp = x - (x - xm)/df*f;
     //printf("sz: [%.17g;%.17g]:%.17g {%.17g, %.17g, %.17g}\n", min, max, step, xm, x, xp);
     //printf("sz: [%g,%g]:%g {%g, %g, %g}\n", min, max, step, xm, x, xp);
-    printf("sz: [%g:%g] : %g {%g, %g, %g}\n", min, max, pp, xm, x, xp);
+    if (logg)
+      //fprintf(logg, "sz: [%g:%g] : %g {%g, %g, %g}\n", min, max, pp, xm, x, xp);
+      fprintf(logg, "%.17e %.17e %.17e 0\n", x, f, xp - x);
     if (xp > max || xp < min) {
-      printf("bisect (range)\n");
+      //printf("bisect (range)\n");
       goto bisect;
     }
     if (x == xp) {
@@ -101,7 +108,7 @@ bisect:
       if (a * b < 0) {
         double t = (min + max) / 2.;
         double w = fn(t, arg) / fmax;
-        printf("bis: [%.17e:%.17e:%.17e] ~ {%g, %g, %g}\n", min, t, max, a, w, b);
+        //printf("bis: [%.17e:%.17e:%.17e] ~ {%g, %g, %g}\n", min, t, max, a, w, b);
         if (w == 0) {
           return t;
         }
@@ -110,10 +117,9 @@ bisect:
         } else {
           min = t;
         }
-        /*xm = min;
+        xm = min;
         x = xm + (max - min) / pp;
-        continue;*/
-        goto bisect;
+        continue;
       }
       break;
   }
@@ -172,9 +178,11 @@ array_t * numerov_energies(preferences_t * prefs)
   array_t * fn = array_mapv(Epos, numerov_integrate, &num);
   array_dump_to_file("score", " ", 2, Epos, fn);
 
-  search_zero(numerov_integrate, &num, 0.19898675456265641, 0.00001, 0.58597326496978575, 1);
+  /*logg = fopen("log", "w");
+  search_zero(numerov_integrate, &num, 4.071293413904657, 0.0000001, 5.4263565891472867, 1);
+  fclose(logg); logg = NULL;*/
 
-#if 0
+#if 1
   double smin, smax, z = 0;
   array_t * sc = search_der_sign_change_3(Epos->data[1] - Epos->data[0], fn, 0, 0, 0);
 
@@ -227,7 +235,7 @@ array_t * numerov_energies(preferences_t * prefs)
 
   free(sc);
 
-#elseif AAA
+#else
   for (int k = 0; k < fn->length - 1; k++) {
     double f1 = fn->data[k];
     double f2 = fn->data[k + 1];
