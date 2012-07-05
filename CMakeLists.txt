@@ -81,6 +81,7 @@ add_library(projekt STATIC
   ${projekt_SOURCE_DIR}/carray.c
   ${projekt_SOURCE_DIR}/array.c
   ${projekt_SOURCE_DIR}/peaks.c
+  ${projekt_SOURCE_DIR}/akima.c
 )
 set_target_properties(projekt PROPERTIES COMPILE_FLAGS ${CFLAGS})
 set_target_properties(projekt PROPERTIES LINK_FLAGS ${LFLAGS})

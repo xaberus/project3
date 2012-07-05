@@ -48,6 +48,8 @@
 
 #include "simulation.h"
 
+#include "akima.h"
+
 /*! \memberof results
  creates an empty results struct */
 results_t * results_new() {
@@ -612,7 +614,7 @@ int eval_results(preferences_t * prefs)
       array_t * d = array_cspline_zroots(s, f, a, prefs->dE, 1);
       array_dump_to_file("smo", " ", 1, d);
 
-      /*double win = prefs->enrgrange.win * prefs->dE;
+      double win = prefs->enrgrange.win * prefs->dE;
       for (int k = 0; k < d->length - 1; k++) {
         double d1 = d->data[k];
         double d2 = d->data[k + 1];
@@ -634,6 +636,24 @@ int eval_results(preferences_t * prefs)
           array_dump_to_file("osp", " ", 2, ks, kp);
           array_dump_to_file("osd", " ", 1, kd);
 
+          akima_t * ak = akima_new(ks, kp);
+
+          array_t * as = array_equipart(ks->data[0], ks->data[ks->length-1], 100);
+          array_t * aa = akima_interpolate(ak, as);
+          array_t * ad = akima_dinterpolate(ak, as);
+
+          array_t * ao = akima_zroots(ak, 1);
+
+          array_dump_to_file("aaa", " ", 2, as, aa);
+          array_dump_to_file("aad", " ", 2, as, ad);
+          array_dump_to_file("aao", " ", 1, ao);
+
+          free(as);
+          free(ao);
+          free(aa);
+          free(ad);
+          akima_free(ak);
+
           free(kd);
           free(ka);
           free(ks);
@@ -641,7 +661,7 @@ int eval_results(preferences_t * prefs)
           free(ku);
           free(kf);
         }
-      }*/
+      }
 
       array_t * dl = array_cspline_dinterpolate(x, s, f, a, prefs->dE);
       array_dump_to_file("smc", " ", 2, x, dl);

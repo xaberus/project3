@@ -145,7 +145,7 @@ array_t * numerov_energies(preferences_t * prefs)
 
   array_t * zp = array_new_sized(0, 100);
 
-  int res = 4*4096;
+  int res = 6*4096;
 
   numerov_t num = {prefs->potential, prefs->dx, 0, 1e-16};
 
@@ -176,7 +176,7 @@ array_t * numerov_energies(preferences_t * prefs)
 
   array_t * Epos = array_equipart(min, max, res);
   array_t * fn = array_mapv(Epos, numerov_integrate, &num);
-  //array_dump_to_file("score", " ", 2, Epos, fn);
+  array_dump_to_file("score", " ", 2, Epos, fn);
 
   /*logg = fopen("log", "w");
   search_zero(numerov_integrate, &num, 4.071293413904657, 0.0000001, 5.4263565891472867, 1);
