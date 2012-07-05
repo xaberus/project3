@@ -152,7 +152,7 @@ array_t * numerov_energies(preferences_t * prefs)
   //double E = -1.44966298553678342e+02;
   //double E = -1.38753187223842588e+02;
   //double E = -2.01916470909939498e+01;
-  double E = 102.5;//+10e-6;
+  /*double E = 102.5;//+10e-6;
   {
     int length = num.V->length;
     array_t * psia = array_new(length);
@@ -169,14 +169,14 @@ array_t * numerov_energies(preferences_t * prefs)
     }
     array_dump_to_file("scarep", " ", 1, psia);
     free(psia);
-  }
+  }*/
 
   double min = prefs->enrgrange.min;
   double max = prefs->enrgrange.max;
 
   array_t * Epos = array_equipart(min, max, res);
   array_t * fn = array_mapv(Epos, numerov_integrate, &num);
-  array_dump_to_file("score", " ", 2, Epos, fn);
+  //array_dump_to_file("score", " ", 2, Epos, fn);
 
   /*logg = fopen("log", "w");
   search_zero(numerov_integrate, &num, 4.071293413904657, 0.0000001, 5.4263565891472867, 1);
@@ -186,11 +186,11 @@ array_t * numerov_energies(preferences_t * prefs)
   double smin, smax, z = 0;
   array_t * sc = search_der_sign_change_3(Epos->data[1] - Epos->data[0], fn, 0, 0, 0);
 
-  FILE * fp = fopen("sumo", "w");
+  /*FILE * fp = fopen("sumo", "w");
   for (int k = 0; k < sc->length - 1; k++) {
     fprintf(fp, "%g\n", Epos->data[(int)sc->data[k]]);
   }
-  fclose(fp);
+  fclose(fp);*/
 
   double eres = 0.0000001;
 
