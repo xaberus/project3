@@ -1,7 +1,7 @@
 
 local dump = require "dump"
 
-local tol = .3
+local tol = .04
 
 local abs = math.abs
 
@@ -125,7 +125,7 @@ while true do
       end
     end
     for k, ss in pairs(irow) do
-      local d = (min - ss[1])
+      local d = (min - ss[1]) / ss[1]
       if abs(d) < tol then
         indices[k] = indices[k] + 1
       else
@@ -152,7 +152,7 @@ while true do
   if er and nr then
     er = tonumbers(er)
     nr = tonumbers(nr)
-    local d = (er[1] - nr[1])
+    local d = (er[1] - nr[1]) / nr[1]
     if abs(d) < tol then
       vlst[#vlst+1] = nconcat({er, nr})
       i = i + 1

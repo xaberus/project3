@@ -311,7 +311,7 @@ array_t * array_cspline_interpolate(array_t * x, array_t * s, array_t * f, array
 
 /*! \memberof array
  returns a interpolated value of f for point \a z */
-double array_cspline_interpolate1(double z, array_t * s, array_t * f, array_t * a, double h)
+double array_cspline_ddinterpolate1(double z, array_t * s, array_t * a, double h)
 {
   int idx = array_getmaxindex(s, z);
   if (idx >= 0) {
@@ -319,13 +319,11 @@ double array_cspline_interpolate1(double z, array_t * s, array_t * f, array_t * 
     double dt2 = (z - s->data[idx + 1]);
     double a1 = a->data[idx];
     double a2 = a->data[idx + 1];
-    return
-      (dt1 * dt1 * dt1 * a2 - dt2 * dt2 * dt2 * a1) / ( 6 * h)
-      + dt1 * (f->data[idx + 1] / h - h * a2 / 6)
-      + dt2 * (h * a1 / 6 - f->data[idx] / h);
+    return (a2 * dt1 - a1 * dt2) / h;
   }
   return 0;
 }
+
 /*! \memberof array
  returns a vector of interpolated values of f for points in x */
 array_t * array_cspline_dinterpolate(array_t * x, array_t * s, array_t * f, array_t * a, double h)
@@ -354,11 +352,13 @@ array_t * array_cspline_dinterpolate(array_t * x, array_t * s, array_t * f, arra
 }
 
 /*! \memberof array
- returns zero roots */
-array_t * array_cspline_zroots(array_t * s, array_t * f, array_t * a, double h)
+ returns cspline extrema with (second derrivative * \a c) < 0 */
+array_t * array_cspline_zroots(array_t * s, array_t * f, array_t * a, double h, double c)
 {
-  printf("##### %d %d\n", a->length, s->length);
-  array_t * p = array_new(s->length);
+  printf("array_cspline_zroots(%g) : %d control points\n", c, a->length);
+
+  array_t * p = array_new_sized(0, 100);
+
   for (int k = 0; k < s->length; k++) {
     double z = s->data[k];
     int idx = k > 0 ? k - 1 : 0;
@@ -369,27 +369,31 @@ array_t * array_cspline_zroots(array_t * s, array_t * f, array_t * a, double h)
     double a1 = a->data[idx];
     double a2 = a->data[idx + 1];
     double r =
-    /*p->data[k] =
-      (pow(z - s1, 3) * a2 - pow(z - s2, 3) * a1) / ( 6 * h)
-      + (z - s1) * (f->data[idx + 1] / h - h * a2 / 6)
-      + (z - s2) * (h * a1 / 6 - f->data[idx] / h);*/
-      pow(6*a2*s1 - 6*a1*s2,2) + 12*(a1 - a2)*(-6*f1 + 6*f2 - a2*(pow(h,2) - 3*pow(s1,2)) + a1*(pow(h,2) - 3*pow(s2,2)));
+      pow(6*a2*s1 - 6*a1*s2,2)
+      + 12*(a1 - a2)*(-6*f1 + 6*f2 - a2*(pow(h,2) - 3*pow(s1,2)) + a1*(pow(h,2) - 3*pow(s2,2)));
     if (r >= 0) {
-      double xp = (sqrt(r) + 6*a2*s1 - 6*a1*s2)/(6.*(a1 + a2));
+      double xp = -(sqrt(r) + 6*a2*s1 - 6*a1*s2)/(6.*(a1 - a2));
       double xm = (sqrt(r) - 6*a2*s1 + 6*a1*s2)/(6.*(a1 - a2));
-      if (xm >= s1 && xm <= s2) {
-        printf("--- %g :: %g %g\n", z, xm, xp);
-        p->data[k] = xm;
-      } else if (xp >= s1 && xp <= s2) {
-        printf("+++ %g :: %g %g\n", z, xm, xp);
-        p->data[k] = xp;
-      } else {
-        p->data[k] = 0.0/0.0;
+      //printf("-->>-- {%g, (%g, %g), %g} \n", s1, xp, xm, s2);
+      if (xm >= s1 && xm <= s2 && array_cspline_ddinterpolate1(xm, s, a, h) * c < 0) {
+        printf("--- %g :: %g\n", z, xm);
+        p = array_append(p, xm);
+      } else if (xp >= s1 && xp <= s2 && array_cspline_ddinterpolate1(xp, s, a, h) * c < 0) {
+        printf("+++ %g :: %g\n", z, xp);
+        p = array_append(p, xp);
       }
-    } else {
-      p->data[k] = 0.0/0.0;
     }
   }
 
   return p;
+}
+
+
+array_t * array_pcopy(int length, double raw[length])
+{
+  array_t * r = array_new(length);
+  for (int k = 0; k < length; k++) {
+    r->data[k] = raw[k];
+  }
+  return r;
 }

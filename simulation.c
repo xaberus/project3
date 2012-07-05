@@ -609,17 +609,50 @@ int eval_results(preferences_t * prefs)
       array_dump_to_file("spl", " ", 2, x, p);
       array_dump_to_file("src", " ", 2, s, f);
 
-      array_t * d = array_cspline_zroots(s, f, a, prefs->dE);
-      array_dump_to_file("smo", " ", 2, s, d);
+      array_t * d = array_cspline_zroots(s, f, a, prefs->dE, 1);
+      array_dump_to_file("smo", " ", 1, d);
+
+      /*double win = prefs->enrgrange.win * prefs->dE;
+      for (int k = 0; k < d->length - 1; k++) {
+        double d1 = d->data[k];
+        double d2 = d->data[k + 1];
+        if (fabs(d1 - d2) < win) {
+          int m = array_getmaxindex(s, d1 - win);
+          int M = array_getmaxindex(s, d2 + win);
+          int L = (M + 1) - m;
+          printf("going to decide duplicate %g:%d vs %g:%d @ %g:%d\n", d1, m, d2, M, win, L);
+
+          array_t * ks = array_pcopy(L, s->data + m);
+          array_t * kp = array_pcopy(L, f->data + m);
+          array_t * ku = array_map(kp, fabs);
+          array_t * kf = array_map(ku, log);
+
+          array_t * ka = array_cspline_prepare(kf, prefs->dE);
+          array_t * kd = array_cspline_zroots(ks, kf, ka, prefs->dE, -1);
+
+          array_dump_to_file("osc", " ", 2, ks, kf);
+          array_dump_to_file("osp", " ", 2, ks, kp);
+          array_dump_to_file("osd", " ", 1, kd);
+
+          free(kd);
+          free(ka);
+          free(ks);
+          free(kp);
+          free(ku);
+          free(kf);
+        }
+      }*/
 
       array_t * dl = array_cspline_dinterpolate(x, s, f, a, prefs->dE);
       array_dump_to_file("smc", " ", 2, x, dl);
+      free(dl);
 
       free(s);
       free(f);
       free(a);
       free(x);
       free(p);
+      free(d);
     }
 
     printf("-------- %d\n", data->length);

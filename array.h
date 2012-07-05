@@ -47,7 +47,9 @@ array_t * search_der_sign_change_3(double h, array_t * f, double gm, double gp, 
 array_t * array_cspline_prepare(array_t * f, double h);
 int array_getmaxindex(array_t * v, double z);
 array_t * array_cspline_interpolate(array_t * x, array_t * s, array_t * f, array_t * a, double h);
-array_t * array_cspline_zroots(array_t * s, array_t * f, array_t * a, double h);
+array_t * array_cspline_zroots(array_t * s, array_t * f, array_t * a, double h, double c);
 array_t * array_cspline_dinterpolate(array_t * x, array_t * s, array_t * f, array_t * a, double h);
+
+array_t * array_pcopy(int length, double raw[length]);
 
 #endif /* _ARRAY_H_ */

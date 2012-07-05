@@ -1,28 +1,37 @@
 local math = require("math")
 local complex = require("complex")
+local omega = 5;
 local exp = math.exp
-local dx = 0.825/10
-local bins = 512
+local sqrt = math.sqrt
+local pi = math.pi
+
 config = {
-  bins = bins; dt = 5.7/1000;
-  range = {-dx*bins/2,dx*bins/2};
-  steps = 1; runs = 16384;
+  bins = 4096; dt = 1 / (1000 * pi);
+  range = {-15,15};
+  steps = 10; runs = 50000;
+  vstep = 100; vframes = 200;
+  --
   potential = function(x)
-    local k0, k2, k3, k4 = -132.7074997, 7, .5, 1
-    return  k0-k2*x^2+k3*x^3+k4*x^4
+    return omega^2/4 * x ^ 2;
   end;
   psi = function(x)
-    local a, s = 1.9, 0.87
-    return {exp(-(x-a)^2/(2*s^2)),exp(-(x+a)^2/(2*s^2))}
+    local a = .5
+    local aa = a * a
+    local x0 = 0
+    local k0 = 10
+    local xx = (x-x0) * (x-x0)
+    return  math.exp(-xx/(aa)) * complex.exp({0, k0*(x)})
   end;
-  enrgrange = {-139, -137.8, 6, 1.5};
+  energy = function(k)
+    return omega * (.5 + k)
+  end;
+  enrgrange = {0, 200, 6, 1};
   output = {
-    dir = "./badness";
+    dir = "./test";
     apsi = "apsi.dat";
     pot = "pot.dat";
     corr = "corr.dat";
     dftcorr = "dftcorr.dat";
-    theoenrg = "theoenrg.dat";
     spectrum = "spectrum.dat";
   };
 }

@@ -36,58 +36,55 @@ typedef struct {
   double psi2;
 } numerov_t;
 
+inline static
+long double numerov_step(double T1, double T2, double T3, long double f1, long double f2)
+{
+  return (f1 * (T1 - 1.) + 2. * f2 * (1. + 5. * T2)) / (1. - T3);
+}
+
 double numerov_integrate(double E, void * arg)
 {
   numerov_t * num = arg;
   int length = num->V->length;
   double * V = num->V->data;
-  double psi[3] = {num->psi1, num->psi2, 0};
+  long double psi1 = num->psi1, psi2 = num->psi2;
   double hh = num->h * num->h;
-  int k, p;
-  for (k = 2, p = 0; k < length; k++, p++) {
-#if 0
-    double f1 = psi[p % 3], f2 = psi[(p + 1) % 3];
-    double s2 = 2 * (1 - 5 * hh / 12 * (E - V[k - 1])) * f2;
-    double s1 = (1 + hh / 12 * (E - V[k - 2])) * f1;
-    double d = (1 + hh / 12 * (E - V[k]));
-    psi[(p + 2) % 3] = (s2 - s1) / d;
-#else
-    double f1 = psi[p % 3], f2 = psi[(p + 1) % 3];
-    double k1 = E - V[k - 2];
-    double k2 = E - V[k - 1];
-    double c3 = 1.0 / (12.0 + hh * (E - V[k]));
-
-    psi[(p + 2) % 3] = (-(12.0 * f1) + (24.0 * f2) - (f1 * hh * k1) - (10.0 * f2 * hh * k2)) * c3;
-#endif
+  for (int k = 2; k < length; k++) {
+    double T1 = - hh * (E - V[k - 2]) / 12.;
+    double T2 = - hh * (E - V[k - 1]) / 12.;
+    double T3 = - hh * (E - V[k]) / 12.;
+    double t = numerov_step(T1, T2, T3, psi1, psi2);
+    psi1 = psi2;
+    psi2 = t;
   }
-  return psi[(p + 2) % 3];
+  return (double) psi2;
 }
 
 /* newton: secant method
  * seek for zero in the intervall, with wt most one change of sign of first derrivative of fn */
 double search_zero(double (*fn)(double, void*), void * arg, double min, double step, double max, double fmax) {
-  //printf("searching in: [%.17g;%.17g]:%.17g ~ %.17g\n", min, max, step, fmax);
+  printf("searching in: [%.17g:%.17g] : %.17g ~ %.17g\n", min, max, step, fmax);
   double xm, x, xp, a, b, f, fm, df;
-  int k, retry = 0;
-again:
+  double pp = (max - min) / step;
+  int k;
   xm = min, x = xm + step, xp, a, b;
+
   for (k = 0; x >= min && x <= max && k < maximal_iterations; k++) {
     f = fn(x, arg)/fmax;
     fm = fn(xm, arg)/fmax;
     df = (f-fm);
     if (df == 0.0) { // worst case scenario....
-      //printf("bisect (zero)\n");
-      if (!retry) {
-        step = step / 2.0;
-      }
+      printf("bisect (zero)\n");
       goto bisect;
     }
+
     //printf("->sz: {%.17g, %.17g, %.17g, %.17g}\n", f, fm, xm, x);
     xp = x - (x - xm)/df*f;
     //printf("sz: [%.17g;%.17g]:%.17g {%.17g, %.17g, %.17g}\n", min, max, step, xm, x, xp);
     //printf("sz: [%g,%g]:%g {%g, %g, %g}\n", min, max, step, xm, x, xp);
+    printf("sz: [%g:%g] : %g {%g, %g, %g}\n", min, max, pp, xm, x, xp);
     if (xp > max || xp < min) {
-      //printf("bisect (range)\n");
+      printf("bisect (range)\n");
       goto bisect;
     }
     if (x == xp) {
@@ -99,32 +96,28 @@ again:
 bisect:
       // wenn wir hier landen, dann war x zu nah an einem Extrempunkt, versuche einen besseren
       // Startwert mit Bisektionsverfahren zu finden
-      a = fn(min, arg)/fmax;
-      b = fn(max, arg)/fmax;
+      a = fn(min, arg) / fmax;
+      b = fn(max, arg) / fmax;
       if (a * b < 0) {
-        double t = (min + max)/2;
-        double w = fn(t, arg)/fmax;
+        double t = (min + max) / 2.;
+        double w = fn(t, arg) / fmax;
+        printf("bis: [%.17e:%.17e:%.17e] ~ {%g, %g, %g}\n", min, t, max, a, w, b);
         if (w == 0) {
-          return w;
+          return t;
         }
         if (a * w < 0) {
           max = t;
         } else {
           min = t;
         }
-        xm = min;
-        x = xm + step;
-        continue;
+        /*xm = min;
+        x = xm + (max - min) / pp;
+        continue;*/
+        goto bisect;
       }
       break;
   }
-  if (!retry) {
-    /* enter _desperate_ mode... */
-    retry = 1;
-    step = step/2.0;
-    goto again;
-  }
-  printf("found no zero in: [%.17g;%.17g]:%.17g ~ %.17g\n", min, max, step, fmax);
+  printf("found no zero in: [%.17g:%.17g] : %.17g ~ %.17g\n", min, max, step, fmax);
   return 0.0/0.0; // nan - nichts gefunden
 }
 
@@ -145,26 +138,53 @@ array_t * numerov_energies(preferences_t * prefs)
 {
 
   array_t * zp = array_new_sized(0, 100);
-  double smin, smax, z = 0;
 
-  int res = 4096;
+  int res = 4*4096;
 
-  numerov_t num = {prefs->potential, prefs->dx, 0, 10e-16};
+  numerov_t num = {prefs->potential, prefs->dx, 0, 1e-16};
+
+  //double E = -1.44966298553678342e+02;
+  //double E = -1.38753187223842588e+02;
+  //double E = -2.01916470909939498e+01;
+  double E = 102.5;//+10e-6;
+  {
+    int length = num.V->length;
+    array_t * psia = array_new(length);
+    double * psi = psia->data;
+    double * V = num.V->data;
+    psi[0] = num.psi1;
+    psi[1] = num.psi2;
+    double hh = num.h * num.h;
+    for (int k = 2; k < length; k++) {
+      double T1 = - hh * (E - V[k - 2]) / 12.;
+      double T2 = - hh * (E - V[k - 1]) / 12.;
+      double T3 = - hh * (E - V[k]) / 12.;
+      psi[k] = numerov_step(T1, T2, T3, psi[k-2], psi[k-1]);
+    }
+    array_dump_to_file("scarep", " ", 1, psia);
+    free(psia);
+  }
 
   double min = prefs->enrgrange.min;
   double max = prefs->enrgrange.max;
 
   array_t * Epos = array_equipart(min, max, res);
   array_t * fn = array_mapv(Epos, numerov_integrate, &num);
+  array_dump_to_file("score", " ", 2, Epos, fn);
 
+  search_zero(numerov_integrate, &num, 0.19898675456265641, 0.00001, 0.58597326496978575, 1);
+
+#if 0
+  double smin, smax, z = 0;
   array_t * sc = search_der_sign_change_3(Epos->data[1] - Epos->data[0], fn, 0, 0, 0);
 
-  /*array_dump_to_file("score", " ", 2, Epos, fn);
   FILE * fp = fopen("sumo", "w");
   for (int k = 0; k < sc->length - 1; k++) {
     fprintf(fp, "%g\n", Epos->data[(int)sc->data[k]]);
   }
-  fclose(fp);*/
+  fclose(fp);
+
+  double eres = 0.0000001;
 
   if (sc->length > 0) {
     // we have changes of sign at sc[n], between each we must seek for zeros
@@ -172,7 +192,7 @@ array_t * numerov_energies(preferences_t * prefs)
     // search in range [min,s[0]]
     smin = min;
     smax = Epos->data[(int) sc->data[0]];
-    z = search_zero(numerov_integrate, &num, smin, (smax - smin)/res, smax, getmaxabs(fn, 0, (int) sc->data[0]));
+    z = search_zero(numerov_integrate, &num, smin, eres, smax, getmaxabs(fn, 0, (int) sc->data[0]));
     if (z == z) {
       zp = array_append(zp, z);
     }
@@ -181,7 +201,7 @@ array_t * numerov_energies(preferences_t * prefs)
     for (int k = 0; k < sc->length - 1; k++) {
       double smin = Epos->data[(int) sc->data[k]], smax = Epos->data[(int) sc->data[k+1]];
       //printf("[%g,%g]\n", smin, smax);
-      z = search_zero(numerov_integrate, &num, smin, (smax - smin)/res, smax,
+      z = search_zero(numerov_integrate, &num, smin, eres, smax,
                       getmaxabs(fn, (int) sc->data[k], (int) sc->data[k+1]));
       if (z == z) {
         zp = array_append(zp, z);
@@ -191,22 +211,44 @@ array_t * numerov_energies(preferences_t * prefs)
     // suche im Bereich [s[n],max]
     smin = Epos->data[(int) sc->data[sc->length-1]];
     smax = max;
-    z = search_zero(numerov_integrate, &num, smin, (smax - smin)/res, smax,
+    z = search_zero(numerov_integrate, &num, smin, eres, smax,
       getmaxabs(fn, (int) sc->data[sc->length-1], fn->length-1));
     if (z == z) {
       zp = array_append(zp, z);
     }
   } else {
     // wir haben keine Nullstellen: suche im Bereich [min,max]
-    z = search_zero(numerov_integrate, &num, min, (max - min)/res, max,
+    z = search_zero(numerov_integrate, &num, min, eres, max,
       getmaxabs(fn, 0, fn->length-1));
     if (z == z) {
       zp = array_append(zp, z);
     }
   }
 
+  free(sc);
+
+#elseif AAA
+  for (int k = 0; k < fn->length - 1; k++) {
+    double f1 = fn->data[k];
+    double f2 = fn->data[k + 1];
+    if (f1 == 0.) {
+      zp = array_append(zp, Epos->data[k]);
+    } else if (f2 == 0.) {
+      zp = array_append(zp, Epos->data[k + 1]);
+    } else if ((f1 < 0. && f2 > 0.) || (f1 > 0. && f2 < 0.)) {
+      printf("here!\n");
+      double e1 = Epos->data[k];
+      double e2 = Epos->data[k + 1];
+      double er = 0.0000001;
+      double z = search_zero(numerov_integrate, &num, e1, er, e2, getmaxabs(fn, 0, fn->length-1));
+      if (z == z) {
+        zp = array_append(zp, z);
+      }
+    }
+  }
+#endif
+
   free(Epos);
   free(fn);
-  free(sc);
   return zp;
 }
