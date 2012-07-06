@@ -27,7 +27,7 @@ config = {
   end;
   enrgrange = {0, 200, 6, 1};
   output = {
-    dir = "./harmosca";
+    dir = "./data/harmosca";
     apsi = "apsi.dat";
     pot = "pot.dat";
     corr = "corr.dat";

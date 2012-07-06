@@ -88,6 +88,9 @@ void preferences_free(preferences_t * prefs) {
   free(prefs->output.corr);
   free(prefs->output.dftcorr);
   free(prefs->output.spectrum);
+  free(prefs->output.numen);
+  free(prefs->output.splen);
+  free(prefs->output.aken);
 
   if (prefs->results) {
     results_free(prefs->results);
@@ -248,6 +251,18 @@ int preferences_read(lua_State * L, preferences_t * prefs)
     lua_getfield(L, tab, "spectrum");
     if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.spectrum undefined\n"); return -1; }
     prefs->output.spectrum = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
+
+    lua_getfield(L, tab, "numen");
+    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.numen undefined\n"); return -1; }
+    prefs->output.numen = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
+    lua_getfield(L, tab, "splen");
+    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.splen undefined\n"); return -1; }
+    prefs->output.splen = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
+    lua_getfield(L, tab, "aken");
+    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.aken undefined\n"); return -1; }
+    prefs->output.aken = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
+
+
     lua_pop(L, 1);
   }
   printf("  output:\n");
@@ -568,7 +583,7 @@ int eval_results(preferences_t * prefs)
     fclose(fp);
   }
 
-  // dump spectrum
+  // dump spectra
   {
     int len = strlen(prefs->output.dir) + strlen(prefs->output.spectrum) + 10;
     char path[len];
@@ -605,74 +620,22 @@ int eval_results(preferences_t * prefs)
         s->data[k] = (m + k - ck->length/2 - odd) * dE;
         f->data[k] = logdat->data[m + k];
       }
+
+      /* spline search */
       array_t * a = array_cspline_prepare(f, prefs->dE);
-      array_t * x = array_equipart(prefs->enrgrange.min, prefs->enrgrange.max, s->length * 7);
-      array_t * p = array_cspline_interpolate(x, s, f, a, prefs->dE);
-      array_dump_to_file("spl", " ", 2, x, p);
-      array_dump_to_file("src", " ", 2, s, f);
-
+      snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.splen);
       array_t * d = array_cspline_zroots(s, f, a, prefs->dE, 1);
-      array_dump_to_file("smo", " ", 1, d);
-
-      double win = prefs->enrgrange.win * prefs->dE;
-      for (int k = 0; k < d->length - 1; k++) {
-        double d1 = d->data[k];
-        double d2 = d->data[k + 1];
-        if (fabs(d1 - d2) < win) {
-          int m = array_getmaxindex(s, d1 - win);
-          int M = array_getmaxindex(s, d2 + win);
-          int L = (M + 1) - m;
-          printf("going to decide duplicate %g:%d vs %g:%d @ %g:%d\n", d1, m, d2, M, win, L);
-
-          array_t * ks = array_pcopy(L, s->data + m);
-          array_t * kp = array_pcopy(L, f->data + m);
-          array_t * ku = array_map(kp, fabs);
-          array_t * kf = array_map(ku, log);
-
-          array_t * ka = array_cspline_prepare(kf, prefs->dE);
-          array_t * kd = array_cspline_zroots(ks, kf, ka, prefs->dE, -1);
-
-          array_dump_to_file("osc", " ", 2, ks, kf);
-          array_dump_to_file("osp", " ", 2, ks, kp);
-          array_dump_to_file("osd", " ", 1, kd);
-
-          akima_t * ak = akima_new(ks, kp);
-
-          array_t * as = array_equipart(ks->data[0], ks->data[ks->length-1], 100);
-          array_t * aa = akima_interpolate(ak, as);
-          array_t * ad = akima_dinterpolate(ak, as);
-
-          array_t * ao = akima_zroots(ak, 1);
-
-          array_dump_to_file("aaa", " ", 2, as, aa);
-          array_dump_to_file("aad", " ", 2, as, ad);
-          array_dump_to_file("aao", " ", 1, ao);
-
-          free(as);
-          free(ao);
-          free(aa);
-          free(ad);
-          akima_free(ak);
-
-          free(kd);
-          free(ka);
-          free(ks);
-          free(kp);
-          free(ku);
-          free(kf);
-        }
-      }
-
-      array_t * dl = array_cspline_dinterpolate(x, s, f, a, prefs->dE);
-      array_dump_to_file("smc", " ", 2, x, dl);
-      free(dl);
-
-      free(s);
-      free(f);
+      array_dump_to_file(path, " ", 1, d);
       free(a);
-      free(x);
-      free(p);
       free(d);
+
+      /* akima search */
+      akima_t * ak = akima_new(s, f);
+      array_t * ao = akima_zroots(ak, 1);
+      snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.aken);
+      array_dump_to_file(path, " ", 1, ao);
+      akima_free(ak);
+      free(ao);
     }
 
     printf("-------- %d\n", data->length);
@@ -695,9 +658,9 @@ int eval_results(preferences_t * prefs)
 
   {
     array_t * numen = numerov_energies(prefs);
-    int len = strlen(prefs->output.dir) + strlen("numen.dat") + 10;
+    int len = strlen(prefs->output.dir) + strlen(prefs->output.numen) + 10;
     char path[len];
-    snprintf(path, len, "%s/%s", prefs->output.dir, "numen.dat");
+    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.numen);
     array_dump_to_file(path, " ", 1, numen);
     free(numen);
   }

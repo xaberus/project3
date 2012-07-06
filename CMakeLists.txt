@@ -17,7 +17,14 @@ set(PRESETS
   "square"
   "square1"
   "harmosca"
+
   ${BADNESS}
+
+  "cmp10k"
+  "cmp20k"
+  "cmp30k"
+  "cmp40k"
+  "cmp50k"
 )
 
 #set(CMAKE_VERBOSE_MAKEFILE true)
@@ -75,23 +82,23 @@ string (REPLACE ";" " " CFLAGS "${CFLAGS_LIST}")
 string (REPLACE ";" " " LFLAGS "${LFLAGS_LIST}")
 
 add_library(projekt STATIC
-  ${projekt_SOURCE_DIR}/simulation.c
-  ${projekt_SOURCE_DIR}/splitop.c
-  ${projekt_SOURCE_DIR}/numerov.c
-  ${projekt_SOURCE_DIR}/carray.c
-  ${projekt_SOURCE_DIR}/array.c
-  ${projekt_SOURCE_DIR}/peaks.c
-  ${projekt_SOURCE_DIR}/akima.c
+  ${projekt_SOURCE_DIR}/source/simulation.c
+  ${projekt_SOURCE_DIR}/source/splitop.c
+  ${projekt_SOURCE_DIR}/source/numerov.c
+  ${projekt_SOURCE_DIR}/source/carray.c
+  ${projekt_SOURCE_DIR}/source/array.c
+  ${projekt_SOURCE_DIR}/source/peaks.c
+  ${projekt_SOURCE_DIR}/source/akima.c
 )
 set_target_properties(projekt PROPERTIES COMPILE_FLAGS ${CFLAGS})
 set_target_properties(projekt PROPERTIES LINK_FLAGS ${LFLAGS})
 
-add_executable(simulate ${projekt_SOURCE_DIR}/simulate.c)
+add_executable(simulate ${projekt_SOURCE_DIR}/source/simulate.c)
 set_target_properties(simulate PROPERTIES COMPILE_FLAGS ${CFLAGS})
 set_target_properties(simulate PROPERTIES LINK_FLAGS ${LFLAGS})
 target_link_libraries(simulate ${PKG_LIBRARIES} fftw3_threads m projekt)
 
-add_executable(evaluate ${projekt_SOURCE_DIR}/evaluate.c)
+add_executable(evaluate ${projekt_SOURCE_DIR}/source/evaluate.c)
 set_target_properties(evaluate PROPERTIES COMPILE_FLAGS ${CFLAGS})
 set_target_properties(evaluate PROPERTIES LINK_FLAGS ${LFLAGS})
 target_link_libraries(evaluate ${PKG_LIBRARIES} fftw3_threads m projekt)
@@ -102,182 +109,227 @@ target_link_libraries(evaluate ${PKG_LIBRARIES} fftw3_threads m projekt)
 #set_target_properties(tabgen PROPERTIES COMPILE_FLAGS ${CFLAGS})
 #target_link_libraries(tabgen ${PKG_LIBRARIES} m)
 
+set(LUA_SCRIPTS "${projekt_SOURCE_DIR}/scripts/?.lua;${projekt_SOURCE_DIR}/presets/?.inc")
+set(SCRIPTS "${projekt_SOURCE_DIR}/scripts")
+
+macro(get_lua_var cfg var cvar)
+  execute_process(
+    COMMAND
+      env "LUA_PATH=${LUA_SCRIPTS}" ${LUA} -e "loadfile(\"${cfg}\")(); print(${var})"
+    OUTPUT_VARIABLE _get_var
+    RESULT_VARIABLE _get_result
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if (_get_result)
+    message(SEND_ERROR "Could not get ${LUA} variable '${var}' from ${cfg}")
+  else()
+    #message("${cfg}:${var} = '${_get_var}'")
+    set(${cvar} ${_get_var})
+  endif()
+endmacro()
+
 foreach(PRESET ${PRESETS})
   message("adding ${PRESET}")
 
+  set(PRESET_LUA "${projekt_SOURCE_DIR}/presets/${PRESET}.lua")
+
+  get_lua_var(${PRESET_LUA} "config.output.dir" CONFIG_DIR)
+  get_lua_var(${PRESET_LUA} "config.output.apsi" CONFIG_APSI)
+  get_lua_var(${PRESET_LUA} "config.output.pot" CONFIG_POT)
+  get_lua_var(${PRESET_LUA} "config.output.corr" CONFIG_CORR)
+  get_lua_var(${PRESET_LUA} "config.output.dftcorr" CONFIG_DFTCORR)
+  get_lua_var(${PRESET_LUA} "config.output.spectrum" CONFIG_SPECTRUM)
+  get_lua_var(${PRESET_LUA} "config.output.numen" CONFIG_NUMEN)
+  get_lua_var(${PRESET_LUA} "config.output.splen" CONFIG_SPLEN)
+  get_lua_var(${PRESET_LUA} "config.output.aken" CONFIG_AKEN)
+
+  set(PRESET_DIR "${projekt_SOURCE_DIR}/${CONFIG_DIR}")
+
   add_custom_command(
     OUTPUT
-      "${projekt_SOURCE_DIR}/${PRESET}/result.dat"
+      "${PRESET_DIR}/result.dat"
     COMMAND
-      $<TARGET_FILE:simulate>
-        "${projekt_SOURCE_DIR}/${PRESET}.lua"
-        "${projekt_SOURCE_DIR}/${PRESET}/result.dat"
+      mkdir -p "${PRESET_DIR}"
+    COMMAND
+      env
+        "'LUA_PATH=${LUA_SCRIPTS}'"
+        $<TARGET_FILE:simulate>
+        ${PRESET_LUA}
+        "${PRESET_DIR}/result.dat"
     MAIN_DEPENDENCY
-      "${projekt_SOURCE_DIR}/${PRESET}.lua")
+      ${PRESET_LUA})
 
   if(${CAIRO_FOUND})
     add_custom_command(
       OUTPUT
-        "${projekt_SOURCE_DIR}/${PRESET}/apsi.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/corr.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/numen.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/stats"
-        "${projekt_SOURCE_DIR}/${PRESET}/video/image00000.png"
+        "${PRESET_DIR}/${CONFIG_APSI}"
+        "${PRESET_DIR}/${CONFIG_CORR}"
+        "${PRESET_DIR}/${CONFIG_DFTCORR}"
+        "${PRESET_DIR}/${CONFIG_POT}"
+        "${PRESET_DIR}/${CONFIG_SPECTRUM}"
+        "${PRESET_DIR}/${CONFIG_NUMEN}"
+        "${PRESET_DIR}/stats"
+        "${PRESET_DIR}/video/image00000.png"
       COMMAND
-        $<TARGET_FILE:evaluate>
-          "${projekt_SOURCE_DIR}/${PRESET}.lua"
-          "${projekt_SOURCE_DIR}/${PRESET}/result.dat"
+        env "'LUA_PATH=${LUA_SCRIPTS}'"
+          $<TARGET_FILE:evaluate>
+          ${PRESET_LUA}
+          "${PRESET_DIR}/result.dat"
       MAIN_DEPENDENCY
-        "${projekt_SOURCE_DIR}/${PRESET}.lua"
-        "${projekt_SOURCE_DIR}/${PRESET}/result.dat")
+        ${PRESET_LUA}
+        "${PRESET_DIR}/result.dat")
   else()
     add_custom_command(
       OUTPUT
-        "${projekt_SOURCE_DIR}/${PRESET}/apsi.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/corr.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/numen.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/stats"
+        "${PRESET_DIR}/${CONFIG_APSI}"
+        "${PRESET_DIR}/${CONFIG_CORR}"
+        "${PRESET_DIR}/${CONFIG_DFTCORR}"
+        "${PRESET_DIR}/${CONFIG_POT}"
+        "${PRESET_DIR}/${CONFIG_SPECTRUM}"
+        "${PRESET_DIR}/${CONFIG_NUMEN}"
+        "${PRESET_DIR}/stats"
       COMMAND
-        $<TARGET_FILE:evaluate>
-          "${projekt_SOURCE_DIR}/${PRESET}.lua"
-          "${projekt_SOURCE_DIR}/${PRESET}/result.dat"
+        env "'LUA_PATH=${LUA_SCRIPTS}'" $<TARGET_FILE:evaluate>
+          ${PRESET_LUA}
+          "${PRESET_DIR}/result.dat"
       MAIN_DEPENDENCY
-        "${projekt_SOURCE_DIR}/${PRESET}.lua"
-        "${projekt_SOURCE_DIR}/${PRESET}/result.dat")
+        ${PRESET_LUA}
+        "${PRESET_DIR}/result.dat")
   endif()
 
-  set(CONFS ${CONFS} "${projekt_SOURCE_DIR}/${PRESET}.lua")
+  set(CONFS ${CONFS} ${PRESET_LUA})
 
   add_custom_command(
     OUTPUT
-      "${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc"
+      "${PRESET_DIR}/spectrum.tex.inc"
     COMMAND
-      ${LUA} "${projekt_SOURCE_DIR}/tabgen.lua"
-        "${projekt_SOURCE_DIR}/${PRESET}.lua"
-        "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/numen.dat"
-        >"${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc"
+      env "'LUA_PATH=${LUA_SCRIPTS}'" ${LUA} "${SCRIPTS}/tabgen.lua"
+        ${PRESET_LUA}
+        "${PRESET_DIR}/${CONFIG_SPECTRUM}"
+        "${PRESET_DIR}/${CONFIG_NUMEN}"
+        >"${PRESET_DIR}/spectrum.tex.inc"
     MAIN_DEPENDENCY
       "${projekt_SOURCE_DIR}/tabgen.lua"
-      "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
-      "${projekt_SOURCE_DIR}/${PRESET}/numen.dat")
+      "${PRESET_DIR}/${CONFIG_SPECTRUM}"
+      "${PRESET_DIR}/${CONFIG_NUMEN}")
 
-  set(SPECTRA ${SPECTRA} "${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc")
+  set(SPECTRA ${SPECTRA} "${PRESET_DIR}/spectrum.tex.inc")
 
   if(${CAIRO_FOUND})
     add_custom_command(
       OUTPUT
-        "${projekt_SOURCE_DIR}/${PRESET}/movie.webm"
+        "${PRESET_DIR}/movie.webm"
       COMMAND
         ${FFMPEG} -y -r 20 -b 9600 -i
-          "${projekt_SOURCE_DIR}/${PRESET}/video/image%05d.png"
-          "${projekt_SOURCE_DIR}/${PRESET}/movie.webm"
+          "${PRESET_DIR}/video/image%05d.png"
+          "${PRESET_DIR}/movie.webm"
       MAIN_DEPENDENCY
-        "${projekt_SOURCE_DIR}/${PRESET}/video/image00000.png")
+        "${PRESET_DIR}/video/image00000.png")
   endif()
 
 ###########################################################################
 
-  #"${projekt_SOURCE_DIR}/${PRESET}/init.png"
+  #"${PRESET_DIR}/init.png"
   add_custom_command(
     OUTPUT
-      "${projekt_SOURCE_DIR}/${PRESET}/init.pdf"
+      "${PRESET_DIR}/init.pdf"
     COMMAND
-      ${GNUPLOT} "${projekt_SOURCE_DIR}/init.gp"
+      ${GNUPLOT} "${SCRIPTS}/init.gp"
     WORKING_DIRECTORY
-      "${projekt_SOURCE_DIR}/${PRESET}/"
+      "${PRESET_DIR}/"
     DEPENDS
-      "${projekt_SOURCE_DIR}/init.gp"
-      "${projekt_SOURCE_DIR}/${PRESET}/apsi.dat"
-      "${projekt_SOURCE_DIR}/${PRESET}/pot.dat")
+      "${SCRIPTS}/init.gp"
+      "${PRESET_DIR}/${CONFIG_APSI}"
+      "${PRESET_DIR}/${CONFIG_POT}")
 
   add_custom_command(
     OUTPUT
-      "${projekt_SOURCE_DIR}/${PRESET}/corr.pdf"
+      "${PRESET_DIR}/corr.pdf"
     COMMAND
-      ${GNUPLOT} "${projekt_SOURCE_DIR}/corr.gp"
+      ${GNUPLOT} "${SCRIPTS}/corr.gp"
     WORKING_DIRECTORY
-      "${projekt_SOURCE_DIR}/${PRESET}/"
+      "${PRESET_DIR}/"
     DEPENDS
-      "${projekt_SOURCE_DIR}/corr.gp"
-      "${projekt_SOURCE_DIR}/${PRESET}/corr.dat")
+      "${SCRIPTS}/corr.gp"
+      "${PRESET_DIR}/${CONFIG_CORR}")
 
   add_custom_command(
     OUTPUT
-      "${projekt_SOURCE_DIR}/${PRESET}/spektrum.pdf"
+      "${PRESET_DIR}/spektrum.pdf"
     COMMAND
-      ${GNUPLOT} "${projekt_SOURCE_DIR}/spektrum.gp"
+      ${GNUPLOT} "${SCRIPTS}/spektrum.gp"
     WORKING_DIRECTORY
-      "${projekt_SOURCE_DIR}/${PRESET}/"
+      "${PRESET_DIR}/"
     DEPENDS
-      "${projekt_SOURCE_DIR}/spektrum.gp"
-      "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat")
+      "${SCRIPTS}/spektrum.gp"
+      "${PRESET_DIR}/${CONFIG_DFTCORR}")
 
 ###########################################################################
+
+  add_custom_target(${PRESET}_compile
+    DEPENDS
+      "${PRESET_DIR}/result.dat")
 
   if(${CAIRO_FOUND})
     add_custom_target(${PRESET}
       DEPENDS
-        "${projekt_SOURCE_DIR}/${PRESET}.lua"
-        "${projekt_SOURCE_DIR}/${PRESET}/apsi.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/corr.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/movie.webm"
-        "${projekt_SOURCE_DIR}/${PRESET}/numen.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc"
+        ${PRESET_LUA}
+        "${PRESET_DIR}/${CONFIG_APSI}"
+        "${PRESET_DIR}/${CONFIG_CORR}"
+        "${PRESET_DIR}/${CONFIG_DFTCORR}"
+        "${PRESET_DIR}/${CONFIG_POT}"
+        "${PRESET_DIR}/${CONFIG_SPECTRUM}"
+        "${PRESET_DIR}/movie.webm"
+        "${PRESET_DIR}/${CONFIG_NUMEN}"
+        "${PRESET_DIR}/spectrum.tex.inc"
 
-        "${projekt_SOURCE_DIR}/${PRESET}/init.pdf"
-        "${projekt_SOURCE_DIR}/${PRESET}/corr.pdf"
-        "${projekt_SOURCE_DIR}/${PRESET}/spektrum.pdf")
+        "${PRESET_DIR}/init.pdf"
+        "${PRESET_DIR}/corr.pdf"
+        "${PRESET_DIR}/spektrum.pdf")
   else()
     add_custom_target(${PRESET}
       DEPENDS
-        "${projekt_SOURCE_DIR}/${PRESET}.lua"
-        "${projekt_SOURCE_DIR}/${PRESET}/apsi.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/corr.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/dftcorr.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/pot.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/spectrum.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/numen.dat"
-        "${projekt_SOURCE_DIR}/${PRESET}/spectrum.tex.inc"
+        ${PRESET_LUA}
+        "${PRESET_DIR}/${CONFIG_APSI}"
+        "${PRESET_DIR}/${CONFIG_CORR}"
+        "${PRESET_DIR}/${CONFIG_DFTCORR}"
+        "${PRESET_DIR}/${CONFIG_POT}"
+        "${PRESET_DIR}/${CONFIG_SPECTRUM}"
+        "${PRESET_DIR}/${CONFIG_NUMEN}"
+        "${PRESET_DIR}/spectrum.tex.inc"
 
-        "${projekt_SOURCE_DIR}/${PRESET}/init.pdf"
-        "${projekt_SOURCE_DIR}/${PRESET}/corr.pdf"
-        "${projekt_SOURCE_DIR}/${PRESET}/spektrum.pdf")
+        "${PRESET_DIR}/init.pdf"
+        "${PRESET_DIR}/corr.pdf"
+        "${PRESET_DIR}/spektrum.pdf")
   endif()
   set(PLOTS ${PLOTS}
-    "${projekt_SOURCE_DIR}/${PRESET}/init.pdf"
-    "${projekt_SOURCE_DIR}/${PRESET}/corr.pdf"
-    "${projekt_SOURCE_DIR}/${PRESET}/spektrum.pdf")
+    "${PRESET_DIR}/init.pdf"
+    "${PRESET_DIR}/corr.pdf"
+    "${PRESET_DIR}/spektrum.pdf")
 endforeach()
 
 foreach(BAD ${BADNESS})
-  message("adding ${BAD}")
+  message("adding badness ${BAD}")
+
+  get_lua_var(${PRESET_LUA} "config.output.dir" CONFIG_DIR)
+
+  set(BAD_DIR "${projekt_SOURCE_DIR}/${CONFIG_DIR}")
 
   add_custom_command(
     OUTPUT
-      "${projekt_SOURCE_DIR}/${BAD}/bspektrum.pdf"
+      "${BAD_DIR}/bspektrum.pdf"
     COMMAND
-      ${GNUPLOT} "${projekt_SOURCE_DIR}/bspektrum.gp"
+      ${GNUPLOT} "${SCRIPTS}/bspektrum.gp"
     WORKING_DIRECTORY
-      "${projekt_SOURCE_DIR}/${BAD}/"
+      "${BAD_DIR}/"
     DEPENDS
-      "${projekt_SOURCE_DIR}/bspektrum.gp"
-      "${projekt_SOURCE_DIR}/${BAD}/dftcorr.dat"
-      "${projekt_SOURCE_DIR}/${BAD}/spectrum.dat"
-      "${projekt_SOURCE_DIR}/${BAD}/numen.dat")
+      "${SCRIPTS}/bspektrum.gp"
+      "${BAD_DIR}/${CONFIG_DFTCORR}"
+      "${BAD_DIR}/${CONFIG_SPECTRUM}"
+      "${BAD_DIR}/${CONFIG_NUMEN}")
   set(PLOTS ${PLOTS} "${projekt_SOURCE_DIR}/${BAD}/bspektrum.pdf")
   set(BDEP
-    ${BDEP} "${projekt_SOURCE_DIR}/${BAD}/bspektrum.pdf"
-    "${projekt_SOURCE_DIR}/${BAD}/spectrum.tex.inc")
+    ${BDEP} "${BAD_DIR}/bspektrum.pdf"
+    "${BAD_DIR}/spectrum.tex.inc")
 endforeach()
 
 add_custom_command(

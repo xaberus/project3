@@ -64,6 +64,9 @@ typedef struct preferences {
     char * dftcorr;     /**< filename for dump DTF of corr */
     char * theoenrg;    /**< filename to dump theoretical energies to */
     char * spectrum;    /**< filename to dump spectrum to */
+    char * numen;       /**< filename to dump numerov energies */
+    char * splen;       /**< filename to dump spline energies */
+    char * aken;        /**< filename to dump akima energies */
   } output;             /**< output configuration */
 
   int        tsteps;    /**< total number of iterations */
