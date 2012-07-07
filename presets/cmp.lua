@@ -3,6 +3,7 @@ local complex = require("complex")
 local exp = math.exp
 
 config = {
+  cmp = true;
   bins = 4096;
   dt = 0.0001;
   range = {-8,8};
@@ -17,7 +18,7 @@ config = {
     local a, s = 1.9, 0.87
     return {exp(-(x-a)^2/(2*s^2)),exp(-(x+a)^2/(2*s^2))}
   end;
-  enrgrange = {-146, 0, 4, 1.5};
+  enrgrange = {-146, 0, 4, 1};
   output = {
     dir = "./data/cmp";
     apsi = "apsi.dat";

@@ -23,6 +23,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+#include <string.h>
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -66,7 +68,86 @@ int main(int argc, char * argv[argc])
         undump_results(prefs, fp);
         fclose(fp);
 
-        eval_results(prefs);
+        if (!prefs->cmp) {
+          eval_results(prefs);
+        } else {
+          int len = strlen(prefs->output.dir) + 100;
+          char path[len];
+
+          carray_t * co = prefs->results->co;
+
+          for (int length = 10000; length <= co->length; length += co->length / 60) {
+            int odd = (length%2);
+            carray_t * c = carray_pcopy(length, co->data);
+
+            double hannfkt = 2 * M_PI/(length);
+            for (int k = 0; k < length; k++) {
+              complex double z = c->data[k];
+              co->data[k] = z; // save original function
+              c->data[k] = z * .5 * (1 - cos(hannfkt * k));
+            }
+            carray_t * ck = carray_new(c->length);
+            fftw_plan p = fftw_plan_dft_1d(length, c->data, ck->data, FFTW_FORWARD, FFTW_ESTIMATE);
+            fftw_execute_dft(p, c->data, ck->data);
+
+            double nor = 1/sqrt(length);
+            for (int k = 0; k < length; k++) { ck->data[k] *= nor; }
+
+            int o = 0;
+            int * index = malloc(sizeof(int) * length); assert(index);
+            /* create a map to place negative energies in the right place */
+            for (int k = ck->length/2; k < ck->length; k++) { index[o++] = k; }
+            for (int k = 0; k < ck->length/2; k++) { index[o++] = k; }
+            array_t * data = carray_abs(ck, index);
+
+            double dE = 2 * M_PI / (prefs->dt * prefs->steps * length);
+
+            int m = prefs->enrgrange.min / dE + .5 + length/2;
+            int M = prefs->enrgrange.max / dE + .5 + length/2;
+
+            assert(m >= 0 && m < M && M < co->length);
+
+            array_t * s = array_new(M - m + 1);
+            array_t * f = array_new(s->length);
+            for (int k = 0; k < s->length; k++) {
+              s->data[k] = (m + k - ck->length/2 - odd + 1) * dE;
+              f->data[k] = log(data->data[m + k]);
+            }
+
+            snprintf(path, len, "%s/o-%d.dat", prefs->output.dir, length);
+            array_dump_to_file(path, " ", 2, s, f);
+
+            {
+              snprintf(path, len, "%s/d-%d.dat", prefs->output.dir, length);
+              array_t * peaks = direct_search(dE, s, f,
+                prefs->enrgrange.win, prefs->enrgrange.sel);
+              array_dump_to_file(path, " ", 1, peaks);
+              free(peaks);
+            }
+
+            {
+              snprintf(path, len, "%s/s-%d.dat", prefs->output.dir, length);
+              array_t * peaks = spline_search(s, f);
+              array_dump_to_file(path, " ", 1, peaks);
+              free(peaks);
+            }
+
+            {
+              snprintf(path, len, "%s/a-%d.dat", prefs->output.dir, length);
+              array_t * peaks = akima_search(s, f);
+              array_dump_to_file(path, " ", 1, peaks);
+              free(peaks);
+            }
+
+
+            fftw_destroy_plan(p);
+            free(c);
+            free(index);
+            free(data);
+            free(s);
+            free(f);
+          }
+        }
       }
     }
   }

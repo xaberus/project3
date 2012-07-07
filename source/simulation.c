@@ -50,6 +50,8 @@
 
 #include "akima.h"
 
+#include "squares.h"
+
 /*! \memberof results
  creates an empty results struct */
 results_t * results_new() {
@@ -110,6 +112,12 @@ int preferences_read(lua_State * L, preferences_t * prefs)
   int config = lua_gettop(L);
 
   printf("configuration: \n");
+
+  lua_getfield(L, config, "cmp");
+  if (lua_isboolean(L, -1)) {
+    prefs->cmp = lua_toboolean(L, -1);
+  }
+  lua_pop(L, 1);
 
   // get the number of bins for position space discretization */
   lua_getfield(L, config, "bins");
@@ -461,10 +469,15 @@ int start_simulation(preferences_t * prefs)
   return 0;
 }
 
+const char magick[18] = "project3 results\n\0";
+
 void dump_results(preferences_t * prefs, FILE * fp)
 {
   results_t * res = prefs->results;
 #define WRITE_FIELD(_f) assert(fwrite(&res->_f, sizeof(res->_f), 1, fp) == 1)
+
+  assert(fwrite(magick, sizeof(magick), 1, fp) == 1);
+
   WRITE_FIELD(co->length);
   for (int k = 0; k < res->co->length; k++) {
     WRITE_FIELD(co->data[k]);
@@ -490,12 +503,236 @@ void undump_results(preferences_t * prefs, FILE * fp)
     size_t sz = sizeof(res->_f->data[0]) * len; \
     assert(fread(res->_f->data, 1, sz, fp) == sz); \
   } while(0)
+
+  char buf[sizeof(magick)];
+  assert(fread(buf, 1, sizeof(magick), fp) == sizeof(magick));
+  assert(memcmp(buf, magick, sizeof(magick)) == 0);
+
   results_t * res = malloc(sizeof(results_t)); assert(res);
   READ_ARRAY(co, carray_new);
   READ_ARRAY(c, carray_new);
   READ_ARRAY(ck, carray_new);
 #undef READ_ARRAY
   prefs->results = res;
+}
+
+array_t * direct_search(double delta, array_t * p, array_t * data, int swindow, double h)
+{
+  array_t * peaks = peaks_find(delta, data, swindow, h);
+
+  array_t * r = array_new_sized(0,100);
+
+  array_dump_to_file("flop", " ", 2, p, data);
+
+  printf("-------- %d\n", data->length);
+  for (int k = 0; k < peaks->length; k++) {
+    int i = peaks->data[k];
+    if (i > 0 && i < data->length) {
+      r = array_append(r, p->data[i]);
+    }
+  }
+
+  free(peaks);
+
+  return r;
+}
+
+array_t * spline_search(array_t * s, array_t * f)
+{
+  array_t * h = array_intervalls(s);
+  array_t * a = array_cspline_prepare(s, h, f);
+  array_t * d = array_cspline_zroots(s, h, f, a, 1);
+  free(a);
+  return d;
+}
+
+array_t * akima_search(array_t * s, array_t * f)
+{
+  akima_t * ak = akima_new(s, f);
+  array_t * ao = akima_zroots(ak, 1);
+  {
+    array_t * x = array_equipart(s->data[0], s->data[s->length-1], 4*s->length);
+    array_t * fx = akima_interpolate(ak, x);
+    array_dump_to_file("hint", " ", 2, x, fx);
+    free(x);
+    free(fx);
+  }
+  akima_free(ak);
+  return ao;
+}
+
+double lorentz_gauss(double x, double a)
+{
+  double aa = a * a;
+  double xx = x * x;
+  return aa / (exp(xx/aa)*(aa + xx));
+}
+
+double lorentz_gauss_dx(double x, double a)
+{
+  double aa = a * a;
+  double xx = x * x;
+  double aapxx = aa + xx;
+  return (-2*x*(2*aa + xx))/(exp(xx/aa)*aapxx*aapxx);
+}
+
+double lorentz_gauss_ddx(double x, double a)
+{
+  double aa = a * a;
+  double xx = x * x;
+  return (-4*aa*aa*aa + 14*aa*aa*xx + 14*aa*xx*xx + 4*xx*xx*xx)/
+   (aa*exp(xx/aa)*pow(aa + xx,3));
+}
+
+double lorentz_gauss_da(double x, double a)
+{
+  double aa = a * a;
+  double xx = x * x;
+  double aapxx = aa + xx;
+  return (2*xx*(2*aa + xx))/(a*exp(xx/aa)*aapxx*aapxx);
+}
+
+double lorentz_gauss_dda(double x, double a)
+{
+  double aa = a * a;
+  double xx = x * x;
+  return (2*xx*(-6*aa*aa*aa + aa*aa*xx + 5*aa*xx*xx + 2*xx*xx*xx))/
+   (aa*aa*exp(xx/aa)*pow(aa + xx,3));
+}
+
+array_t * complicated_spline_search(preferences_t * prefs, array_t * s, array_t * f)
+{
+  array_t * h = array_intervalls(s);
+  array_t * a = array_cspline_prepare(s, h, f);
+  array_t * d = array_cspline_zroots(s, h, f, a, 1);
+
+  array_t * x = array_equipart(s->data[0], s->data[s->length-1], s->length * 5);
+  array_t * fx = array_cspline_interpolate(x, s, h, f, a);
+  array_dump_to_file("fuck", " ", 2, x, fx);
+  free(x);
+  free(fx);
+
+  free(a);
+  free(h);
+
+  int length = s->length;
+  array_t * ds = array_pcopy(length, s->data);
+  array_t * ns = array_new_sized(0, length);
+  array_t * nf = array_new_sized(0, length);
+
+  for (int i = 0; i < d->length; i++) {
+    double swin = prefs->enrgrange.win * prefs->dE;
+    double z = d->data[i];
+    int m = array_getmaxindex(s, z - swin);
+    int M = array_getmaxindex(s, z + swin);;
+    if (m < 0) m = 0;
+    if (m >= length) m = length - 1;
+    for (int k = m; k <= M; k++) {
+      ds->data[k] = 0.0/0.0;
+    }
+  }
+
+  for (int k = 0; k < length; k++) {
+    double z = ds->data[k];
+    if (z == z) {
+      ns = array_append(ns, z);
+      nf = array_append(nf, f->data[k]);
+    }
+  }
+
+  array_t * nh = array_intervalls(ns);
+  array_t * na = array_cspline_prepare(ns, nh, nf);
+
+  // baseline
+  array_t * b = array_cspline_interpolate(s, ns, nh, nf, na);
+
+  array_dump_to_file("orig", " ", 2, s, f);
+  array_dump_to_file("red", " ", 2, ns, nf);
+  array_dump_to_file("base", " ", 2, s, b);
+
+  array_t * df = array_new(length);
+  for (int k = 0; k < length; k++) {
+    df->data[k] = f->data[k] - b->data[k];
+  }
+
+  free(na);
+  free(nh);
+  free(ds);
+  free(ns);
+  free(nf);
+
+  array_dump_to_file("clean", " ", 2, s, df);
+
+  array_t * nd = array_new_sized(0,d->length);
+
+  for (int i = 0; i < d->length; i++) {
+    double swin = 2 * prefs->enrgrange.win * prefs->dE;
+    double z = d->data[i];
+    int m = array_getmaxindex(s, z - swin);
+    int M = array_getmaxindex(s, z + swin);;
+    if (m < 0) m = 0;
+    if (m >= length) m = length - 1;
+    assert(m < M);
+
+    int l = M - m + 1;
+
+    array_t * ps = array_pcopy(l, s->data + m);
+    array_t * pf = array_pcopy(l, df->data + m);
+
+    double fmin = 1.0/0.0;
+    double fmax = -1.0/0.0;
+
+    for (int k = 0; k < l; k++) {
+      double z = pf->data[k];
+      if (fmin > z) fmin = z;
+      if (fmax < z) fmax = z;
+    }
+
+    double dev = fmax - fmin;
+
+    for (int k = 0; k < l; k++) {
+      double z = pf->data[k];
+      double y = (z - fmin) / dev;
+      pf->data[k] = y;
+    }
+
+
+    sqparam_t par = {
+      .fn = lorentz_gauss,
+      .dx = lorentz_gauss_dx,
+      .ddx = lorentz_gauss_ddx,
+      .da = lorentz_gauss_da,
+      .dda = lorentz_gauss_dda,
+      .xmin = z - swin / 3,
+      .xmax = z + swin / 3,
+      .x0 = z,
+      .amin = .1,
+      .amax = .6,
+      .a0 = 0.2,
+      .s = ps->data,
+      .f = pf->data,
+      .l = l,
+    };
+
+    array_dump_to_file("prep", " ", 2, ps, pf);
+
+    double nz = squares_min_2d(&par);
+    if (nz==nz) {
+      nd = array_append(nd, nz);
+    } else {
+      nd = array_append(nd, z);
+    }
+
+    free(ps);
+    free(pf);
+
+  }
+
+  free(df);
+  free(b);
+  free(d);
+
+  return nd;
 }
 
 /*! \memberof preferences
@@ -522,10 +759,11 @@ int eval_results(preferences_t * prefs)
     }
   }
 
+  int len = strlen(prefs->output.dir) + 100;
+  char path[len];
+
   // dump initial wafevunction
   {
-    int len = strlen(prefs->output.dir) + strlen(prefs->output.apsi) + 10;
-    char path[len];
     snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.apsi);
     FILE * fp = fopen(path, "w"); assert(fp);
     for (int k = 0; k < apsi->length; k++) {
@@ -535,10 +773,8 @@ int eval_results(preferences_t * prefs)
     fclose(fp);
   }
 
-  // dump potnetial used during simulation
+  // dump potential used during simulation
   {
-    int len = strlen(prefs->output.dir) + strlen(prefs->output.pot) + 10;
-    char path[len];
     snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.pot);
     FILE * fp = fopen(path, "w"); assert(fp);
     for (int k = 0; k < apsi->length; k++) {
@@ -549,8 +785,6 @@ int eval_results(preferences_t * prefs)
 
   // dump the correlation function
   {
-    int len = strlen(prefs->output.dir) + strlen(prefs->output.corr) + 10;
-    char path[len];
     snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.corr);
     FILE * fp = fopen(path, "w"); assert(fp);
     for (int k = 0; k < c->length; k++) {
@@ -560,22 +794,25 @@ int eval_results(preferences_t * prefs)
     fclose(fp);
   }
 
+  int length = ck->length, o = 0;
+  int positive = floor(length / 2.);
+  int negative = ceil(length / 2.);
+
   // dump the DTF of corr
   {
-    int len = strlen(prefs->output.dir) + strlen(prefs->output.dftcorr) + 10;
-    char path[len];
     snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.dftcorr);
     FILE * fp = fopen(path, "w"); assert(fp);
     /*for (int k = 0; k < ck->length; k++) {
       complex double z = ck->data[k];
       fprintf(fp, "%.17e %.17e %.17e %.17e\n", k * dE, creal(z), cimag(z), cabs(z));
     }*/
-    for (int k = ck->length/2; k < ck->length; k++) {
-      double x = (k - ck->length) * dE;
+    for (int k = positive; k < length; k++) {
+      double x = -(positive - k - negative) * dE;
+      //double x = (k - length) * dE;
       complex double z = ck->data[k];
       fprintf(fp, "%.17e %.17e %.17e %.17e\n", x, creal(z), cimag(z), cabs(z));
     }
-    for (int k = 0; k < ck->length/2; k++) {
+    for (int k = 0; k < positive; k++) {
       double x = k * dE;
       complex double z = ck->data[k];
       fprintf(fp, "%.17e %.17e %.17e %.17e\n", x, creal(z), cimag(z), cabs(z));
@@ -583,83 +820,67 @@ int eval_results(preferences_t * prefs)
     fclose(fp);
   }
 
-  // dump spectra
+  int * index = malloc(sizeof(int) * length); assert(index);
+  /* create a map to place negative energies in the right place */
+  for (int k = positive; k < length; k++) { index[o++] = k; }
+  for (int k = 0; k < positive; k++) { index[o++] = k; }
+  array_t * data = carray_abs(ck, index);
+
+  int m = floor(prefs->enrgrange.min / dE) + negative;
+  int M = floor(prefs->enrgrange.max / dE) + negative;
+  //int odd = (length%2);
+
+  //array_t * logdat = array_map(data, log);
+  array_t * s = array_new(M - m + 1);
+  array_t * f = array_new(s->length);
+  for (int k = 0; k < s->length; k++) {
+    s->data[k] = (m + k - negative) * dE;
+    f->data[k] = log(data->data[m + k]);
+  }
+
+  // dump spectrum
   {
-    int len = strlen(prefs->output.dir) + strlen(prefs->output.spectrum) + 10;
-    char path[len];
     snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.spectrum);
-    FILE * fp = fopen(path, "w"); assert(fp);
 
-    /*array_t * data = array_new(ck->length);
-    for (int k = 0; k < ck->length; k++) {
-      data->data[k] = cabs(ck->data[k]);
-    }*/
-
-    int length = ck->length, o = 0;
-    int * index = malloc(sizeof(int) * length); assert(index);
-
-    /* create a map to place negative energies in the right place */
-    for (int k = ck->length/2; k < ck->length; k++) { index[o++] = k; }
-    for (int k = 0; k < ck->length/2; k++) { index[o++] = k; }
-
-    array_t * data = carray_abs(ck, index);
-    array_t * logdat = array_map(data, log);
-    array_t * peaks = peaks_find(prefs->dE, logdat, prefs->enrgrange.win, prefs->enrgrange.sel);
-
-    int odd = (length%2);
-
-    {
-      int m = prefs->enrgrange.min / dE + .5 + length/2.;
-      int M = prefs->enrgrange.max / dE + .5 + length/2.;
-
-      assert(M < length && m >= 0 && m < M);
-
-      array_t * s = array_new(M - m + 1);
-      array_t * f = array_new(s->length);
-      for (int k = 0; k < s->length; k++) {
-        s->data[k] = (m + k - ck->length/2 - odd) * dE;
-        f->data[k] = logdat->data[m + k];
-      }
-
-      /* spline search */
-      array_t * a = array_cspline_prepare(f, prefs->dE);
-      snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.splen);
-      array_t * d = array_cspline_zroots(s, f, a, prefs->dE, 1);
-      array_dump_to_file(path, " ", 1, d);
-      free(a);
-      free(d);
-
-      /* akima search */
-      akima_t * ak = akima_new(s, f);
-      array_t * ao = akima_zroots(ak, 1);
-      snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.aken);
-      array_dump_to_file(path, " ", 1, ao);
-      akima_free(ak);
-      free(ao);
-    }
-
-    printf("-------- %d\n", data->length);
-    for (int k = 0; k < peaks->length; k++) {
-      int i = peaks->data[k];
-      if (i > 0 && i < data->length) {
-        double z = (i - data->length/2 - odd) * dE;
-        if (z >= prefs->enrgrange.min && z <= prefs->enrgrange.max) {
-          fprintf(fp, "%.17e\n", z);
-        }
-      }
-    }
-
-    fclose(fp);
+    array_t * peaks = direct_search(prefs->dE, s, f,
+      prefs->enrgrange.win, prefs->enrgrange.sel);
+    array_dump_to_file(path, " ", 1, peaks);
     free(peaks);
-    free(data);
-    free(logdat);
-    free(index);
+  }
+
+  /* spline search */
+  {
+    array_t * peaks = spline_search(s, f);
+    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.splen);
+    array_dump_to_file(path, " ", 1, peaks);
+    free(peaks);
+  }
+
+  /* akima search */
+  {
+    array_t * peaks = akima_search(s, f);
+    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.aken);
+    array_dump_to_file(path, " ", 1, peaks);
+    free(peaks);
   }
 
   {
-    array_t * numen = numerov_energies(prefs);
-    int len = strlen(prefs->output.dir) + strlen(prefs->output.numen) + 10;
-    char path[len];
+    array_t * peaks = complicated_spline_search(prefs, s, f);
+    //snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.aken);
+    //array_dump_to_file(path, " ", 1, peaks);
+    array_dump_to_file("peaks", " ", 1, peaks);
+    free(peaks);
+  }
+
+
+  free(data);
+  free(s);
+  free(f);
+  free(index);
+
+  {
+    array_t * numen = numerov_energies(prefs->dx, prefs->potential,
+      prefs->enrgrange.min, prefs->enrgrange.max);
     snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.numen);
     array_dump_to_file(path, " ", 1, numen);
     free(numen);
@@ -667,8 +888,6 @@ int eval_results(preferences_t * prefs)
 
   // dump variables for gnuplot
   {
-    int len = strlen(prefs->output.dir) + strlen("stats") + 10;
-    char path[len];
     snprintf(path, len, "%s/%s", prefs->output.dir, "stats");
     FILE * fp = fopen(path, "w"); assert(fp);
 

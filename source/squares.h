@@ -21,27 +21,26 @@
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ******************************************************************************/
 
-#ifndef _CARRAY_H_
-#define _CARRAY_H_
+#ifndef _SQUARES_H_
+#define _SQUARES_H_
 
-#include "array.h"
+typedef struct sqparam {
+  double (*fn)(double x, double a);
+  double (*dx)(double x, double a);
+  double (*da)(double x, double a);
+  double (*ddx)(double x, double a);
+  double (*dda)(double x, double a);
+  int l;
+  double * s;
+  double * f;
+  double xmin;
+  double xmax;
+  double x0;
+  double amin;
+  double amax;
+  double a0;
+} sqparam_t;
 
-#include <complex.h>
+double squares_min_2d(sqparam_t * par);
 
-/*! A rezizeable vector of complex doubles */
-typedef struct carray {
-  int            alloc;    /**< allocated length */
-  int            length;   /**< used length */
-  /*! c99 flexible array tail with \a alloc members
-      (field elements are allocated after the header) */
-  complex double data[];
-} carray_t;
-
-carray_t * carray_new(int length);
-carray_t * carray_new_sized(int length, int alloc);
-carray_t * carray_append(carray_t * z, complex double x);
-carray_t * carray_pcopy(int length, complex double raw[length]);
-
-array_t * carray_abs(carray_t * z, int * index);
-
-#endif /* _CARRAY_H_ */
+#endif /* _SQUARES_H_ */

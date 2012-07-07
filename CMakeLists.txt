@@ -12,19 +12,17 @@ set(BADNESS
   "badness"
 )
 
+set(CMP "cmp" "cmp1")
+
 set(PRESETS
+  "test"
+
   "simple"
   "square"
   "square1"
   "harmosca"
 
   ${BADNESS}
-
-  "cmp10k"
-  "cmp20k"
-  "cmp30k"
-  "cmp40k"
-  "cmp50k"
 )
 
 #set(CMAKE_VERBOSE_MAKEFILE true)
@@ -89,6 +87,7 @@ add_library(projekt STATIC
   ${projekt_SOURCE_DIR}/source/array.c
   ${projekt_SOURCE_DIR}/source/peaks.c
   ${projekt_SOURCE_DIR}/source/akima.c
+  ${projekt_SOURCE_DIR}/source/squares.c
 )
 set_target_properties(projekt PROPERTIES COMPILE_FLAGS ${CFLAGS})
 set_target_properties(projekt PROPERTIES LINK_FLAGS ${LFLAGS})
@@ -305,6 +304,36 @@ foreach(PRESET ${PRESETS})
     "${PRESET_DIR}/init.pdf"
     "${PRESET_DIR}/corr.pdf"
     "${PRESET_DIR}/spektrum.pdf")
+endforeach()
+
+foreach(CM ${CMP})
+  set(PRESET_LUA "${projekt_SOURCE_DIR}/presets/${CM}.lua")
+
+  get_lua_var(${PRESET_LUA} "config.output.dir" CONFIG_DIR)
+
+  set(PRESET_DIR "${projekt_SOURCE_DIR}/${CONFIG_DIR}")
+
+  add_custom_command(
+    OUTPUT
+      "${PRESET_DIR}/result.dat"
+    COMMAND
+      mkdir -p "${PRESET_DIR}"
+    COMMAND
+      env
+        "'LUA_PATH=${LUA_SCRIPTS}'"
+        $<TARGET_FILE:simulate>
+        ${PRESET_LUA}
+        "${PRESET_DIR}/result.dat"
+    MAIN_DEPENDENCY
+      ${PRESET_LUA})
+
+   add_custom_target(${CM}
+    COMMAND
+      env "'LUA_PATH=${LUA_SCRIPTS}'"
+        $<TARGET_FILE:evaluate>
+        ${PRESET_LUA}
+        "${PRESET_DIR}/result.dat"
+    DEPENDS "${PRESET_DIR}/result.dat")
 endforeach()
 
 foreach(BAD ${BADNESS})

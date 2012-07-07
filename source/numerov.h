@@ -24,6 +24,6 @@
 #ifndef _NUMEROV_H_
 #define _NUMEROV_H_
 
-array_t * numerov_energies(preferences_t * prefs);
+array_t * numerov_energies(double dx, array_t * V, double min, double max);
 
 #endif /* _NUMEROV_H_ */

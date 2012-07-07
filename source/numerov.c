@@ -140,14 +140,14 @@ double getmaxabs(array_t * fn, int start, int end)
   return max;
 }
 
-array_t * numerov_energies(preferences_t * prefs)
+array_t * numerov_energies(double dx, array_t * V, double min, double max)
 {
 
   array_t * zp = array_new_sized(0, 100);
 
   int res = 6*4096;
 
-  numerov_t num = {prefs->potential, prefs->dx, 0, 1e-16};
+  numerov_t num = {V, dx, 0, 1e-16};
 
   //double E = -1.44966298553678342e+02;
   //double E = -1.38753187223842588e+02;
@@ -170,9 +170,6 @@ array_t * numerov_energies(preferences_t * prefs)
     array_dump_to_file("scarep", " ", 1, psia);
     free(psia);
   }*/
-
-  double min = prefs->enrgrange.min;
-  double max = prefs->enrgrange.max;
 
   array_t * Epos = array_equipart(min, max, res);
   array_t * fn = array_mapv(Epos, numerov_integrate, &num);

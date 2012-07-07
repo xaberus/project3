@@ -41,6 +41,7 @@ results_t * results_new();
 void results_free(results_t * res);
 
 typedef struct preferences {
+  int        cmp;       /**< run evaluation in cmp mode */
   int        config;    /**< reference to config table in lua registry */
   int        bins;      /**< number of sampling points */
   double     dt;        /**< time delta */
@@ -91,5 +92,9 @@ int start_simulation(preferences_t * prefs);
 void dump_results(preferences_t * prefs, FILE * fp);
 void undump_results(preferences_t * prefs, FILE * fp);
 int eval_results(preferences_t * prefs);
+
+array_t * akima_search(array_t * s, array_t * f);
+array_t * spline_search(array_t * s, array_t * f);
+array_t * direct_search(double delta, array_t * p, array_t * data, int swindow, double h);
 
 #endif /* _SIMULATION_H_ */

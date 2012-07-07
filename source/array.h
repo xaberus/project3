@@ -44,11 +44,12 @@ void array_dump_to_file(const char name[], const char sep[], int argc, ...);
 array_t * array_first_diff_3(double h, array_t * f, double gm, double gp);
 array_t * search_der_sign_change_3(double h, array_t * f, double gm, double gp, double tol);
 
-array_t * array_cspline_prepare(array_t * f, double h);
+array_t * array_intervalls(array_t * x);
+array_t * array_cspline_prepare(array_t * s, array_t * h, array_t * f);
 int array_getmaxindex(array_t * v, double z);
-array_t * array_cspline_interpolate(array_t * x, array_t * s, array_t * f, array_t * a, double h);
-array_t * array_cspline_zroots(array_t * s, array_t * f, array_t * a, double h, double c);
-array_t * array_cspline_dinterpolate(array_t * x, array_t * s, array_t * f, array_t * a, double h);
+array_t * array_cspline_interpolate(array_t * x, array_t * s, array_t * h, array_t * f, array_t * a);
+array_t * array_cspline_zroots(array_t * s, array_t * h, array_t * f, array_t * a, double c);
+array_t * array_cspline_dinterpolate(array_t * x, array_t * s, array_t * h, array_t * f, array_t * a);
 
 array_t * array_pcopy(int length, double raw[length]);
 

@@ -34,7 +34,7 @@
 carray_t * carray_new(int length)
 {
   carray_t * r = malloc(sizeof(carray_t) + sizeof(complex double) * length);
-  if (!r) { abort(); }
+  assert(r);
   r->length = length;
   r->alloc = length;
   return r;
@@ -47,7 +47,7 @@ carray_t * carray_new_sized(int length, int alloc)
 {
   assert(alloc > length);
   carray_t * r = malloc(sizeof(carray_t) + sizeof(complex double) * alloc);
-  if (!r) { abort(); }
+  assert(r);
   r->length = length;
   r->alloc = alloc;
   return r;
@@ -91,6 +91,15 @@ array_t * carray_abs(carray_t * z, int * index)
     for (int k = 0; k < length; k++) {
       *(d++) = cabs(*(s++));
     }
+  }
+  return r;
+}
+
+carray_t * carray_pcopy(int length, complex double raw[length])
+{
+  carray_t * r = carray_new(length);
+  for (int k = 0; k < length; k++) {
+    r->data[k] = raw[k];
   }
   return r;
 }

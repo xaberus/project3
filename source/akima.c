@@ -160,10 +160,10 @@ array_t * akima_zroots(akima_t * a, double s)
 
       //printf("-->>-- {%g, (%g, %g), %g} \n", s1, xp, xm, s2);
       if (xm >= s1 && xm <= s2 && akima_ddinterpolate1(a, xm) * s < 0) {
-        printf("--- %g :: %g\n", s1, xm);
+        //printf("--- %g :: %g\n", s1, xm);
         p = array_append(p, xm);
       } else if (xp >= s1 && xp <= s2 && akima_ddinterpolate1(a, xp) * s < 0) {
-        printf("+++ %g :: %g\n", s1, xp);
+        //printf("+++ %g :: %g\n", s1, xp);
         p = array_append(p, xp);
       }
     }

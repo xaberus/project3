@@ -6,9 +6,10 @@ local sqrt = math.sqrt
 local pi = math.pi
 
 config = {
+  cmp = true;
   bins = 4096; dt = 1 / (1000 * pi);
   range = {-15,15};
-  steps = 10; runs = 50000;
+  steps = 10; runs = 60000;
   vstep = 100; vframes = 200;
   --
   potential = function(x)
@@ -27,7 +28,7 @@ config = {
   end;
   enrgrange = {0, 200, 6, 1};
   output = {
-    dir = "./data/harmosca";
+    dir = "./data/cmp1";
     apsi = "apsi.dat";
     pot = "pot.dat";
     corr = "corr.dat";

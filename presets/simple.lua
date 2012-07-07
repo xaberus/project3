@@ -17,7 +17,7 @@ config = {
     local a, s = 1.9, 0.87
     return {exp(-(x-a)^2/(2*s^2)),exp(-(x+a)^2/(2*s^2))}
   end;
-  enrgrange = {-146, 0, 4, 1.5};
+  enrgrange = {-146, 0, 4, 1};
   output = {
     dir = "./data/simple";
     apsi = "apsi.dat";
