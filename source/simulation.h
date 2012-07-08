@@ -93,8 +93,22 @@ void dump_results(preferences_t * prefs, FILE * fp);
 void undump_results(preferences_t * prefs, FILE * fp);
 int eval_results(preferences_t * prefs);
 
+typedef struct {
+  array_t * s;
+  array_t * f;
+
+  array_t * diren;
+  array_t * numen;
+  array_t * splen;
+  array_t * aken;
+  array_t * ccsen;
+} spectra_t;
+
 array_t * akima_search(array_t * s, array_t * f);
 array_t * spline_search(array_t * s, array_t * f);
 array_t * direct_search(double delta, array_t * p, array_t * data, int swindow, double h);
+
+spectra_t * spectra_search(carray_t * ck, double dE, double Emin, double Emax, double win, double sel);
+void spectra_free(spectra_t * spec);
 
 #endif /* _SIMULATION_H_ */

@@ -76,8 +76,9 @@ int main(int argc, char * argv[argc])
 
           carray_t * co = prefs->results->co;
 
-          for (int length = 10000; length <= co->length; length += co->length / 60) {
-            int odd = (length%2);
+          int num = prefs->runs / 10000;
+
+          for (int length = 10000; length <= co->length; length += co->length / num) {
             carray_t * c = carray_pcopy(length, co->data);
 
             double hannfkt = 2 * M_PI/(length);
@@ -93,59 +94,26 @@ int main(int argc, char * argv[argc])
             double nor = 1/sqrt(length);
             for (int k = 0; k < length; k++) { ck->data[k] *= nor; }
 
-            int o = 0;
-            int * index = malloc(sizeof(int) * length); assert(index);
-            /* create a map to place negative energies in the right place */
-            for (int k = ck->length/2; k < ck->length; k++) { index[o++] = k; }
-            for (int k = 0; k < ck->length/2; k++) { index[o++] = k; }
-            array_t * data = carray_abs(ck, index);
-
             double dE = 2 * M_PI / (prefs->dt * prefs->steps * length);
 
-            int m = prefs->enrgrange.min / dE + .5 + length/2;
-            int M = prefs->enrgrange.max / dE + .5 + length/2;
-
-            assert(m >= 0 && m < M && M < co->length);
-
-            array_t * s = array_new(M - m + 1);
-            array_t * f = array_new(s->length);
-            for (int k = 0; k < s->length; k++) {
-              s->data[k] = (m + k - ck->length/2 - odd + 1) * dE;
-              f->data[k] = log(data->data[m + k]);
-            }
+            spectra_t * spec = spectra_search(ck, dE,
+              prefs->enrgrange.min, prefs->enrgrange.max,
+              prefs->enrgrange.win, prefs->enrgrange.sel);
 
             snprintf(path, len, "%s/o-%d.dat", prefs->output.dir, length);
-            array_dump_to_file(path, " ", 2, s, f);
+            array_dump_to_file(path, " ", 2, spec->s, spec->f);
+            snprintf(path, len, "%s/d-%d.dat", prefs->output.dir, length);
+            array_dump_to_file(path, " ", 1, spec->diren);
+            snprintf(path, len, "%s/s-%d.dat", prefs->output.dir, length);
+            array_dump_to_file(path, " ", 1, spec->splen);
+            snprintf(path, len, "%s/a-%d.dat", prefs->output.dir, length);
+            array_dump_to_file(path, " ", 1, spec->aken);
 
-            {
-              snprintf(path, len, "%s/d-%d.dat", prefs->output.dir, length);
-              array_t * peaks = direct_search(dE, s, f,
-                prefs->enrgrange.win, prefs->enrgrange.sel);
-              array_dump_to_file(path, " ", 1, peaks);
-              free(peaks);
-            }
-
-            {
-              snprintf(path, len, "%s/s-%d.dat", prefs->output.dir, length);
-              array_t * peaks = spline_search(s, f);
-              array_dump_to_file(path, " ", 1, peaks);
-              free(peaks);
-            }
-
-            {
-              snprintf(path, len, "%s/a-%d.dat", prefs->output.dir, length);
-              array_t * peaks = akima_search(s, f);
-              array_dump_to_file(path, " ", 1, peaks);
-              free(peaks);
-            }
-
+            spectra_free(spec);
 
             fftw_destroy_plan(p);
             free(c);
-            free(index);
-            free(data);
-            free(s);
-            free(f);
+            free(ck);
           }
         }
       }

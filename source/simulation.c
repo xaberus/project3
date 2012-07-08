@@ -440,7 +440,7 @@ int start_simulation(preferences_t * prefs)
 
   printf("  hanning before dft\n");
   // von Hann Fenster:
-  double hannfkt = 2 * M_PI/(length);
+  double hannfkt = 2 * M_PI/(length - 1);
   for (int k = 0; k < length; k++) {
     complex double z = c->data[k];
     co->data[k] = z; // save original function
@@ -600,7 +600,7 @@ double lorentz_gauss_dda(double x, double a)
    (aa*aa*exp(xx/aa)*pow(aa + xx,3));
 }
 
-array_t * complicated_spline_search(preferences_t * prefs, array_t * s, array_t * f)
+array_t * complicated_spline_search(array_t * s, array_t * f, double dE, double win)
 {
   array_t * h = array_intervalls(s);
   array_t * a = array_cspline_prepare(s, h, f);
@@ -621,7 +621,7 @@ array_t * complicated_spline_search(preferences_t * prefs, array_t * s, array_t 
   array_t * nf = array_new_sized(0, length);
 
   for (int i = 0; i < d->length; i++) {
-    double swin = prefs->enrgrange.win * prefs->dE;
+    double swin = win * dE;
     double z = d->data[i];
     int m = array_getmaxindex(s, z - swin);
     int M = array_getmaxindex(s, z + swin);;
@@ -666,7 +666,7 @@ array_t * complicated_spline_search(preferences_t * prefs, array_t * s, array_t 
   array_t * nd = array_new_sized(0,d->length);
 
   for (int i = 0; i < d->length; i++) {
-    double swin = 2 * prefs->enrgrange.win * prefs->dE;
+    double swin = 2 * win * dE;
     double z = d->data[i];
     int m = array_getmaxindex(s, z - swin);
     int M = array_getmaxindex(s, z + swin);;
@@ -735,6 +735,63 @@ array_t * complicated_spline_search(preferences_t * prefs, array_t * s, array_t 
   return nd;
 }
 
+spectra_t * spectra_search(carray_t * ck, double dE, double Emin, double Emax, double win, double sel)
+{
+  spectra_t * spec = malloc(sizeof(spectra_t)); assert(spec);
+
+  int length = ck->length, o = 0;
+  int positive = floor(length / 2.);
+  int negative = ceil(length / 2.);
+
+  /* create a map to place negative energies in the right place */
+  int * idxmap = malloc(sizeof(int) * length); assert(idxmap);
+  for (int k = positive; k < length; k++) { idxmap[o++] = k; }
+  for (int k = 0; k < positive; k++) { idxmap[o++] = k; }
+  array_t * data = carray_abs(ck, idxmap);
+  free(idxmap);
+
+  int m = floor(Emin / dE) + negative;
+  int M = floor(Emax / dE) + negative;
+
+  array_t * s = array_new(M - m + 1);
+  array_t * f = array_new(s->length);
+  for (int k = 0; k < s->length; k++) {
+    s->data[k] = (m + k - negative) * dE;
+    f->data[k] = log(data->data[m + k]);
+  }
+  free(data);
+
+  array_dump_to_file("fila", " ", 2, s, f);
+
+  spec->s = s;
+  spec->f = f;
+
+  /* direct search */
+  spec->diren = direct_search(dE, s, f, win, sel);
+
+  /* spline search */
+  spec->splen = spline_search(s, f);
+
+  /* akima search */
+  spec->aken = akima_search(s, f);
+
+  /* complicated cubic spline search */
+  spec->ccsen = complicated_spline_search(s, f, dE, win);
+
+  return spec;
+}
+
+void spectra_free(spectra_t * spec)
+{
+  free(spec->s);
+  free(spec->f);
+  free(spec->diren);
+  free(spec->splen);
+  free(spec->aken);
+  free(spec->ccsen);
+  free(spec);
+}
+
 /*! \memberof preferences
  * this function just evaluates the results \a prefs
  */
@@ -794,89 +851,49 @@ int eval_results(preferences_t * prefs)
     fclose(fp);
   }
 
-  int length = ck->length, o = 0;
+  /*int length = ck->length;
+  int o = 0;
   int positive = floor(length / 2.);
-  int negative = ceil(length / 2.);
+  int negative = ceil(length / 2.);*/
 
   // dump the DTF of corr
   {
     snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.dftcorr);
     FILE * fp = fopen(path, "w"); assert(fp);
-    /*for (int k = 0; k < ck->length; k++) {
+    for (int k = 0; k < ck->length; k++) {
       complex double z = ck->data[k];
       fprintf(fp, "%.17e %.17e %.17e %.17e\n", k * dE, creal(z), cimag(z), cabs(z));
-    }*/
-    for (int k = positive; k < length; k++) {
-      double x = -(positive - k - negative) * dE;
+    }
+    /*for (int k = positive; k < length; k++) {
+      double x = (k - length) * dE;
       //double x = (k - length) * dE;
       complex double z = ck->data[k];
       fprintf(fp, "%.17e %.17e %.17e %.17e\n", x, creal(z), cimag(z), cabs(z));
     }
     for (int k = 0; k < positive; k++) {
-      double x = k * dE;
+      double x = (k) * dE;
       complex double z = ck->data[k];
       fprintf(fp, "%.17e %.17e %.17e %.17e\n", x, creal(z), cimag(z), cabs(z));
-    }
+    }*/
     fclose(fp);
   }
 
-  int * index = malloc(sizeof(int) * length); assert(index);
-  /* create a map to place negative energies in the right place */
-  for (int k = positive; k < length; k++) { index[o++] = k; }
-  for (int k = 0; k < positive; k++) { index[o++] = k; }
-  array_t * data = carray_abs(ck, index);
+  spectra_t * spec = spectra_search(ck, prefs->dE,
+    prefs->enrgrange.min,prefs->enrgrange.max,
+    prefs->enrgrange.win,prefs->enrgrange.sel);
 
-  int m = floor(prefs->enrgrange.min / dE) + negative;
-  int M = floor(prefs->enrgrange.max / dE) + negative;
-  //int odd = (length%2);
+  array_dump_to_file("fila", " ", 2, spec->s, spec->f);
+  snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.spectrum);
+  array_dump_to_file(path, " ", 1, spec->diren);
+  snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.splen);
+  array_dump_to_file(path, " ", 1, spec->splen);
+  snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.aken);
+  array_dump_to_file(path, " ", 1, spec->aken);
+  //snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.ccsen);
+  snprintf(path, len, "peaks");
+  array_dump_to_file(path, " ", 1, spec->ccsen);
 
-  //array_t * logdat = array_map(data, log);
-  array_t * s = array_new(M - m + 1);
-  array_t * f = array_new(s->length);
-  for (int k = 0; k < s->length; k++) {
-    s->data[k] = (m + k - negative) * dE;
-    f->data[k] = log(data->data[m + k]);
-  }
-
-  // dump spectrum
-  {
-    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.spectrum);
-
-    array_t * peaks = direct_search(prefs->dE, s, f,
-      prefs->enrgrange.win, prefs->enrgrange.sel);
-    array_dump_to_file(path, " ", 1, peaks);
-    free(peaks);
-  }
-
-  /* spline search */
-  {
-    array_t * peaks = spline_search(s, f);
-    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.splen);
-    array_dump_to_file(path, " ", 1, peaks);
-    free(peaks);
-  }
-
-  /* akima search */
-  {
-    array_t * peaks = akima_search(s, f);
-    snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.aken);
-    array_dump_to_file(path, " ", 1, peaks);
-    free(peaks);
-  }
-
-  {
-    array_t * peaks = complicated_spline_search(prefs, s, f);
-    //snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.aken);
-    //array_dump_to_file(path, " ", 1, peaks);
-    array_dump_to_file("peaks", " ", 1, peaks);
-    free(peaks);
-  }
-
-
-  free(data);
-  free(s);
-  free(f);
-  free(index);
+  spectra_free(spec);
 
   {
     array_t * numen = numerov_energies(prefs->dx, prefs->potential,

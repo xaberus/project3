@@ -29,5 +29,8 @@ config = {
     corr = "corr.dat";
     dftcorr = "dftcorr.dat";
     spectrum = "spectrum.dat";
+    numen = "numen.dat";
+    splen = "splen.dat";
+    aken = "aken.dat";
   };
 }
