@@ -114,7 +114,7 @@ set(SCRIPTS "${projekt_SOURCE_DIR}/scripts")
 macro(get_lua_var cfg var cvar)
   execute_process(
     COMMAND
-      env "LUA_PATH=${LUA_SCRIPTS}" ${LUA} -e "loadfile(\"${cfg}\")(); print(${var})"
+      env "LUA_PATH=${LUA_SCRIPTS}" ${LUA} -e "loadfile(\"${cfg}\")(); print(assert(${var}))"
     OUTPUT_VARIABLE _get_var
     RESULT_VARIABLE _get_result
     OUTPUT_STRIP_TRAILING_WHITESPACE)

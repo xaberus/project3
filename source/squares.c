@@ -99,7 +99,6 @@ double squares_sum_a_dda(double a, sqparam_t * par)
   return sum;
 }
 
-
 static const int maximal_iterations = 1000;
 
 double squares_search_zero(
@@ -110,7 +109,7 @@ double squares_search_zero(
 {
   double a, b;
   //printf("squares_search_zero([%g:%g])\n", min, max);
-  if (fn == squares_sum_x_dx) {
+  /*if (fn == squares_sum_x_dx) {
     FILE * fp = fopen("suck", "w");
     for (double z = min; z < max; z += (max-min)/1000) {
       fprintf(fp, "%.17e %.17e %.17e %.17e\n", z,
@@ -128,7 +127,7 @@ double squares_search_zero(
         squares_sum_a_dda(z, par));
     }
     fclose(fp);
-  }
+  }*/
   double x = min, xp = 0;
   int k;
   for (k = 0; x >= min && x <= max && k < maximal_iterations; k++) {
@@ -170,25 +169,28 @@ bisect:
 
 double squares_search_min(
   sqparam_t * par,
-  double fn(double a, sqparam_t * par),
-  double dfn(double a, sqparam_t * par),
-  double ddfn(double a, sqparam_t * par),
+  double fn(double z, sqparam_t * par),
+  double dfn(double z, sqparam_t * par),
+  double ddfn(double z, sqparam_t * par),
   double min, double max)
 {
+  (void) fn;
   double z;
   int next = 0;
+  int iterations = 10;
   do {
     next = 0;
     z = squares_search_zero(par, dfn, ddfn, min, max);
-    double d = (max - min) / 1000.;
-    double l = fn(z - d, par);
-    double m = fn(z, par);
-    double r = fn(z + d, par);
-    if (m > l || m > r) {
-      min = z + d;
-      next = 1;
+    if (z == z) {
+      if(ddfn(z, par) <= 0) {
+        //printf("#### %.17e\n", z);
+        min = z + (max - min) / 100000.;
+        next = 1;
+      }
     }
-  } while (next);
+  } while (next && iterations-- && min < max);
+  if (next)
+    return 0.0/0.0;
   return z;
 }
 
@@ -218,23 +220,13 @@ double squares_min_2d(sqparam_t * par)
       squares_sum_a_dda, amin, amax);
     if (a == a) {
       par->a0 = a;
-
-      straw(par);//////////// --delete XXX
-      /*if (par->x0 > -104) {
-        printf("FFFFFF\n");
-        assert(0);
-      }*/
-
-      //printf("found a: %.17e->%.17e!\n", par->a0, a);
+      //printf("found a: %.17e->%.17e!\n", par->a0, a); straw(par);
       double x = squares_search_min(par,
         squares_sum_x,
         squares_sum_x_dx,
         squares_sum_x_ddx, xmin, xmax);
       if (x == x) {
-        //printf("found x: %.17e->%.17e!\n", par->x0, x);
-
-        straw(par);//////////// --delete XXX
-
+        //printf("found x: %.17e->%.17e!\n", par->x0, x); straw(par);
         if (x == par->x0) {
           printf("converged after %d iterations -> %.17e\n", iterations, x);
           return x;

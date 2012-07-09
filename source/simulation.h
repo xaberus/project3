@@ -68,6 +68,7 @@ typedef struct preferences {
     char * numen;       /**< filename to dump numerov energies */
     char * splen;       /**< filename to dump spline energies */
     char * aken;        /**< filename to dump akima energies */
+    char * ccsen;       /**< filename to dump nonlinear least square regression energies */
   } output;             /**< output configuration */
 
   int        tsteps;    /**< total number of iterations */

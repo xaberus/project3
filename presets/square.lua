@@ -21,7 +21,7 @@ config = {
     local k = r + 1
     return pi^2 * k^2/L^2
   end;
-  enrgrange = {0, 20, 8, 2};
+  enrgrange = {0, 20, 4, 2};
   output = {
     dir = "./data/square";
     apsi = "apsi.dat";

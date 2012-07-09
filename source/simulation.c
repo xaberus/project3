@@ -101,6 +101,25 @@ void preferences_free(preferences_t * prefs) {
   free(prefs);
 }
 
+static
+char * get_str_op(lua_State * L, int tab, const char * name, const char * def)
+{
+  char * val;
+  lua_getfield(L, tab, name);
+  if (lua_isnil(L, -1)) {
+    if (def) {
+      val = strdup(def);
+    } else {
+      fprintf(stderr, "aborting, %s undefined\n", name);
+      assert(0);
+    }
+  } else {
+    val = strdup(lua_tostring(L, -1));
+  }
+  lua_pop(L, 1);
+  return val;
+}
+
 /*! \memberof preferences
  * this function reads in the whole configuration needed for the simulation
  */
@@ -241,35 +260,17 @@ int preferences_read(lua_State * L, preferences_t * prefs)
     lua_getfield(L, config, "output");
     if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output undefined\n"); return -1; }
     int tab = lua_gettop(L);
-    lua_getfield(L, tab, "dir");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.dir undefined\n"); return -1; }
-    prefs->output.dir = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
-    lua_getfield(L, tab, "apsi");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.apsi undefined\n"); return -1; }
-    prefs->output.apsi = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
-    lua_getfield(L, tab, "pot");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.pot undefined\n"); return -1; }
-    prefs->output.pot = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
-    lua_getfield(L, tab, "corr");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.corr undefined\n"); return -1; }
-    prefs->output.corr = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
-    lua_getfield(L, tab, "dftcorr");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.dftcorr undefined\n"); return -1; }
-    prefs->output.dftcorr = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
-    lua_getfield(L, tab, "spectrum");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.spectrum undefined\n"); return -1; }
-    prefs->output.spectrum = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
 
-    lua_getfield(L, tab, "numen");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.numen undefined\n"); return -1; }
-    prefs->output.numen = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
-    lua_getfield(L, tab, "splen");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.splen undefined\n"); return -1; }
-    prefs->output.splen = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
-    lua_getfield(L, tab, "aken");
-    if (lua_isnil(L, -1)) { fprintf(stderr, "aborting, output.aken undefined\n"); return -1; }
-    prefs->output.aken = strdup(lua_tostring(L, -1)); lua_pop(L, 1);
-
+    prefs->output.dir = get_str_op(L, tab, "dir", NULL);
+    prefs->output.apsi = get_str_op(L, tab, "apsi", "apsi.dat");
+    prefs->output.pot = get_str_op(L, tab, "pot", "pot.dat");
+    prefs->output.corr = get_str_op(L, tab, "corr", "corr.dat");
+    prefs->output.dftcorr = get_str_op(L, tab, "dftcorr", "dftcorr.dat");
+    prefs->output.spectrum = get_str_op(L, tab, "spectrum", "spectrum.dat");
+    prefs->output.numen = get_str_op(L, tab, "numen", "numen.dat");
+    prefs->output.splen = get_str_op(L, tab, "splen", "splen.dat");
+    prefs->output.aken = get_str_op(L, tab, "aken", "aken.dat");
+    prefs->output.ccsen = get_str_op(L, tab, "ccsen", "ccsen.dat");
 
     lua_pop(L, 1);
   }
@@ -522,9 +523,8 @@ array_t * direct_search(double delta, array_t * p, array_t * data, int swindow, 
 
   array_t * r = array_new_sized(0,100);
 
-  array_dump_to_file("flop", " ", 2, p, data);
+  //array_dump_to_file("flop", " ", 2, p, data);
 
-  printf("-------- %d\n", data->length);
   for (int k = 0; k < peaks->length; k++) {
     int i = peaks->data[k];
     if (i > 0 && i < data->length) {
@@ -550,13 +550,6 @@ array_t * akima_search(array_t * s, array_t * f)
 {
   akima_t * ak = akima_new(s, f);
   array_t * ao = akima_zroots(ak, 1);
-  {
-    array_t * x = array_equipart(s->data[0], s->data[s->length-1], 4*s->length);
-    array_t * fx = akima_interpolate(ak, x);
-    array_dump_to_file("hint", " ", 2, x, fx);
-    free(x);
-    free(fx);
-  }
   akima_free(ak);
   return ao;
 }
@@ -600,17 +593,29 @@ double lorentz_gauss_dda(double x, double a)
    (aa*aa*exp(xx/aa)*pow(aa + xx,3));
 }
 
+double lorentz_gauss_dddx(double x, double a)
+{
+  double aa = a * a;
+  double xx = x * x;
+  return (-4*x*(-15*aa*aa*aa*aa + 5*aa*aa*aa*xx + 15*aa*aa*xx*xx + 9*aa*xx*xx*xx + 2*xx*xx*xx*xx))/
+   (aa*aa*exp(xx/aa)*pow(aa + xx,4));
+}
+
+double lorentz_gauss_ddda(double x, double a)
+{
+  double aa = a * a;
+  double xx = x * x;
+  return
+    (4*xx*(12*pow(a,10) - 15*aa*aa*aa*aa*xx - 25*aa*aa*aa*xx*xx
+      - 9*aa*aa*xx*xx*xx + 3*aa*xx*xx*xx*xx + 2*pow(x,10)))/
+   (pow(a,7)*exp(xx/aa)*pow(aa + xx,4));
+}
+
 array_t * complicated_spline_search(array_t * s, array_t * f, double dE, double win)
 {
   array_t * h = array_intervalls(s);
   array_t * a = array_cspline_prepare(s, h, f);
   array_t * d = array_cspline_zroots(s, h, f, a, 1);
-
-  array_t * x = array_equipart(s->data[0], s->data[s->length-1], s->length * 5);
-  array_t * fx = array_cspline_interpolate(x, s, h, f, a);
-  array_dump_to_file("fuck", " ", 2, x, fx);
-  free(x);
-  free(fx);
 
   free(a);
   free(h);
@@ -646,9 +651,10 @@ array_t * complicated_spline_search(array_t * s, array_t * f, double dE, double 
   // baseline
   array_t * b = array_cspline_interpolate(s, ns, nh, nf, na);
 
-  array_dump_to_file("orig", " ", 2, s, f);
-  array_dump_to_file("red", " ", 2, ns, nf);
-  array_dump_to_file("base", " ", 2, s, b);
+  //array_dump_to_file("start", " ", 1, d);
+  //array_dump_to_file("orig", " ", 2, s, f);
+  //array_dump_to_file("red", " ", 2, ns, nf);
+  //array_dump_to_file("base", " ", 2, s, b);
 
   array_t * df = array_new(length);
   for (int k = 0; k < length; k++) {
@@ -661,7 +667,7 @@ array_t * complicated_spline_search(array_t * s, array_t * f, double dE, double 
   free(ns);
   free(nf);
 
-  array_dump_to_file("clean", " ", 2, s, df);
+  //array_dump_to_file("clean", " ", 2, s, df);
 
   array_t * nd = array_new_sized(0,d->length);
 
@@ -672,60 +678,66 @@ array_t * complicated_spline_search(array_t * s, array_t * f, double dE, double 
     int M = array_getmaxindex(s, z + swin);;
     if (m < 0) m = 0;
     if (m >= length) m = length - 1;
-    assert(m < M);
+    if (M < 0) M = length - 1;
 
-    int l = M - m + 1;
+    if (m < M) {
+      int l = M - m + 1;
 
-    array_t * ps = array_pcopy(l, s->data + m);
-    array_t * pf = array_pcopy(l, df->data + m);
+      array_t * ps = array_pcopy(l, s->data + m);
+      array_t * pf = array_pcopy(l, df->data + m);
 
-    double fmin = 1.0/0.0;
-    double fmax = -1.0/0.0;
+      double fmin = 1.0/0.0;
+      double fmax = -1.0/0.0;
 
-    for (int k = 0; k < l; k++) {
-      double z = pf->data[k];
-      if (fmin > z) fmin = z;
-      if (fmax < z) fmax = z;
-    }
+      for (int k = 0; k < l; k++) {
+        double z = pf->data[k];
+        if (fmin > z) fmin = z;
+        if (fmax < z) fmax = z;
+      }
 
-    double dev = fmax - fmin;
+      double dev = fmax - fmin;
 
-    for (int k = 0; k < l; k++) {
-      double z = pf->data[k];
-      double y = (z - fmin) / dev;
-      pf->data[k] = y;
-    }
+      for (int k = 0; k < l; k++) {
+        double z = pf->data[k];
+        double y = (z - fmin) / dev;
+        pf->data[k] = y;
+      }
 
 
-    sqparam_t par = {
-      .fn = lorentz_gauss,
-      .dx = lorentz_gauss_dx,
-      .ddx = lorentz_gauss_ddx,
-      .da = lorentz_gauss_da,
-      .dda = lorentz_gauss_dda,
-      .xmin = z - swin / 3,
-      .xmax = z + swin / 3,
-      .x0 = z,
-      .amin = .1,
-      .amax = .6,
-      .a0 = 0.2,
-      .s = ps->data,
-      .f = pf->data,
-      .l = l,
-    };
+      sqparam_t par = {
+        .fn = lorentz_gauss,
+        .dx = lorentz_gauss_dx,
+        .ddx = lorentz_gauss_ddx,
+        .da = lorentz_gauss_da,
+        .dda = lorentz_gauss_dda,
+        .xmin = z - swin / 4,
+        .xmax = z + swin / 4,
+        .x0 = z,
+        .amin = .1,
+        .amax = .6,
+        .a0 = 0.2,
+        .s = ps->data,
+        .f = pf->data,
+        .l = l,
+      };
 
-    array_dump_to_file("prep", " ", 2, ps, pf);
+      //array_dump_to_file("prep", " ", 2, ps, pf);
 
-    double nz = squares_min_2d(&par);
-    if (nz==nz) {
-      nd = array_append(nd, nz);
+      double nz = squares_min_2d(&par);
+      if (nz==nz) {
+        nd = array_append(nd, nz);
+        free(ps);
+        free(pf);
+        continue;
+      } else {
+        /* received nan */
+        free(ps);
+        free(pf);
+      }
     } else {
-      nd = array_append(nd, z);
+      assert(0);
     }
-
-    free(ps);
-    free(pf);
-
+    //nd = array_append(nd, z);
   }
 
   free(df);
@@ -761,7 +773,7 @@ spectra_t * spectra_search(carray_t * ck, double dE, double Emin, double Emax, d
   }
   free(data);
 
-  array_dump_to_file("fila", " ", 2, s, f);
+  //array_dump_to_file("fila", " ", 2, s, f);
 
   spec->s = s;
   spec->f = f;
@@ -851,20 +863,19 @@ int eval_results(preferences_t * prefs)
     fclose(fp);
   }
 
-  /*int length = ck->length;
-  int o = 0;
+  int length = ck->length;
   int positive = floor(length / 2.);
-  int negative = ceil(length / 2.);*/
+  //int negative = ceil(length / 2.);
 
   // dump the DTF of corr
   {
     snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.dftcorr);
     FILE * fp = fopen(path, "w"); assert(fp);
-    for (int k = 0; k < ck->length; k++) {
+    /*for (int k = 0; k < ck->length; k++) {
       complex double z = ck->data[k];
       fprintf(fp, "%.17e %.17e %.17e %.17e\n", k * dE, creal(z), cimag(z), cabs(z));
-    }
-    /*for (int k = positive; k < length; k++) {
+    }*/
+    for (int k = positive; k < length; k++) {
       double x = (k - length) * dE;
       //double x = (k - length) * dE;
       complex double z = ck->data[k];
@@ -874,7 +885,7 @@ int eval_results(preferences_t * prefs)
       double x = (k) * dE;
       complex double z = ck->data[k];
       fprintf(fp, "%.17e %.17e %.17e %.17e\n", x, creal(z), cimag(z), cabs(z));
-    }*/
+    }
     fclose(fp);
   }
 
@@ -882,15 +893,13 @@ int eval_results(preferences_t * prefs)
     prefs->enrgrange.min,prefs->enrgrange.max,
     prefs->enrgrange.win,prefs->enrgrange.sel);
 
-  array_dump_to_file("fila", " ", 2, spec->s, spec->f);
   snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.spectrum);
   array_dump_to_file(path, " ", 1, spec->diren);
   snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.splen);
   array_dump_to_file(path, " ", 1, spec->splen);
   snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.aken);
   array_dump_to_file(path, " ", 1, spec->aken);
-  //snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.ccsen);
-  snprintf(path, len, "peaks");
+  snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.ccsen);
   array_dump_to_file(path, " ", 1, spec->ccsen);
 
   spectra_free(spec);

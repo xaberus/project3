@@ -145,7 +145,7 @@ array_t * numerov_energies(double dx, array_t * V, double min, double max)
 
   array_t * zp = array_new_sized(0, 100);
 
-  int res = 6*4096;
+  int res = 4*4096;
 
   numerov_t num = {V, dx, 0, 1e-16};
 
@@ -173,6 +173,7 @@ array_t * numerov_energies(double dx, array_t * V, double min, double max)
 
   array_t * Epos = array_equipart(min, max, res);
   array_t * fn = array_mapv(Epos, numerov_integrate, &num);
+
   array_dump_to_file("score", " ", 2, Epos, fn);
 
   /*logg = fopen("log", "w");
@@ -189,7 +190,7 @@ array_t * numerov_energies(double dx, array_t * V, double min, double max)
   }
   fclose(fp);*/
 
-  double eres = 0.0000001;
+  double eres = 0.000000123;
 
   if (sc->length > 0) {
     // we have changes of sign at sc[n], between each we must seek for zeros
