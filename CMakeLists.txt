@@ -19,7 +19,6 @@ set(PRESETS
 
   "simple"
   "square"
-  "square1"
   "harmosca"
 
   ${BADNESS}
