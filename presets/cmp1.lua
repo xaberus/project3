@@ -9,7 +9,7 @@ config = {
   cmp = true;
   bins = 4096; dt = 1 / (1000 * pi);
   range = {-15,15};
-  steps = 10; runs = 60000;
+  steps = 10; runs = 150000;
   vstep = 100; vframes = 200;
   --
   potential = function(x)
@@ -37,5 +37,6 @@ config = {
     numen = "numen.dat";
     splen = "splen.dat";
     aken = "aken.dat";
+    ccsen = "ccsen.dat";
   };
 }

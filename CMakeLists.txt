@@ -12,7 +12,7 @@ set(BADNESS
   "badness"
 )
 
-set(CMP "cmp" "cmp1")
+set(CMP "cmp" "cmp1" "cmp2")
 
 set(PRESETS
   "test"
@@ -140,6 +140,7 @@ foreach(PRESET ${PRESETS})
   get_lua_var(${PRESET_LUA} "config.output.numen" CONFIG_NUMEN)
   get_lua_var(${PRESET_LUA} "config.output.splen" CONFIG_SPLEN)
   get_lua_var(${PRESET_LUA} "config.output.aken" CONFIG_AKEN)
+  get_lua_var(${PRESET_LUA} "config.output.ccsen" CONFIG_CCSEN)
 
   set(PRESET_DIR "${projekt_SOURCE_DIR}/${CONFIG_DIR}")
 
@@ -197,19 +198,30 @@ foreach(PRESET ${PRESETS})
 
   set(CONFS ${CONFS} ${PRESET_LUA})
 
+  set(PRESET_TAB_ARG "${PRESET_DIR}/${CONFIG_CCSEN}" "${PRESET_DIR}/${CONFIG_NUMEN}")
+
   add_custom_command(
     OUTPUT
       "${PRESET_DIR}/spectrum.tex.inc"
     COMMAND
       env "'LUA_PATH=${LUA_SCRIPTS}'" ${LUA} "${SCRIPTS}/tabgen.lua"
         ${PRESET_LUA}
-        "${PRESET_DIR}/${CONFIG_SPECTRUM}"
-        "${PRESET_DIR}/${CONFIG_NUMEN}"
+        ${PRESET_TAB_ARG}
         >"${PRESET_DIR}/spectrum.tex.inc"
     MAIN_DEPENDENCY
-      "${projekt_SOURCE_DIR}/tabgen.lua"
-      "${PRESET_DIR}/${CONFIG_SPECTRUM}"
-      "${PRESET_DIR}/${CONFIG_NUMEN}")
+      "${SCRIPTS}/tabgen.lua"
+      ${PRESET_TAB_ARG})
+
+  add_custom_command(
+    OUTPUT
+      "${PRESET_DIR}/relen.dat"
+    COMMAND
+      env "'LUA_PATH=${LUA_SCRIPTS}'" ${LUA} "${SCRIPTS}/listgen.lua"
+        ${PRESET_TAB_ARG}
+        >"${PRESET_DIR}/relen.dat"
+    MAIN_DEPENDENCY
+      "${SCRIPTS}/listgen.lua"
+      ${PRESET_TAB_ARG})
 
   set(SPECTRA ${SPECTRA} "${PRESET_DIR}/spectrum.tex.inc")
 
@@ -262,6 +274,17 @@ foreach(PRESET ${PRESETS})
       "${SCRIPTS}/spektrum.gp"
       "${PRESET_DIR}/${CONFIG_DFTCORR}")
 
+  add_custom_command(
+    OUTPUT
+      "${PRESET_DIR}/relen.pdf"
+    COMMAND
+      ${GNUPLOT} "${SCRIPTS}/relen.gp"
+    WORKING_DIRECTORY
+      "${PRESET_DIR}/"
+    DEPENDS
+      "${SCRIPTS}/relen.gp"
+      "${PRESET_DIR}/relen.dat")
+
 ###########################################################################
 
   add_custom_target(${PRESET}_compile
@@ -280,10 +303,12 @@ foreach(PRESET ${PRESETS})
         "${PRESET_DIR}/movie.webm"
         "${PRESET_DIR}/${CONFIG_NUMEN}"
         "${PRESET_DIR}/spectrum.tex.inc"
+        "${PRESET_DIR}/relen.dat"
 
         "${PRESET_DIR}/init.pdf"
         "${PRESET_DIR}/corr.pdf"
-        "${PRESET_DIR}/spektrum.pdf")
+        "${PRESET_DIR}/spektrum.pdf"
+        "${PRESET_DIR}/relen.pdf")
   else()
     add_custom_target(${PRESET}
       DEPENDS
@@ -295,15 +320,13 @@ foreach(PRESET ${PRESETS})
         "${PRESET_DIR}/${CONFIG_SPECTRUM}"
         "${PRESET_DIR}/${CONFIG_NUMEN}"
         "${PRESET_DIR}/spectrum.tex.inc"
+        "${PRESET_DIR}/relen.dat"
 
         "${PRESET_DIR}/init.pdf"
         "${PRESET_DIR}/corr.pdf"
-        "${PRESET_DIR}/spektrum.pdf")
+        "${PRESET_DIR}/spektrum.pdf"
+        "${PRESET_DIR}/relen.pdf")
   endif()
-  set(PLOTS ${PLOTS}
-    "${PRESET_DIR}/init.pdf"
-    "${PRESET_DIR}/corr.pdf"
-    "${PRESET_DIR}/spektrum.pdf")
 endforeach()
 
 foreach(CM ${CMP})
@@ -359,7 +382,6 @@ foreach(BAD ${BADNESS})
       "${BAD_DIR}/${CONFIG_DFTCORR}"
       "${BAD_DIR}/${CONFIG_SPECTRUM}"
       "${BAD_DIR}/${CONFIG_NUMEN}")
-  set(PLOTS ${PLOTS} "${projekt_SOURCE_DIR}/${BAD}/bspektrum.pdf")
   set(BDEP
     ${BDEP} "${BAD_DIR}/bspektrum.pdf"
     "${BAD_DIR}/spectrum.tex.inc")
@@ -385,9 +407,9 @@ add_custom_command(
     "${projekt_SOURCE_DIR}/doc"
   DEPENDS
     "${projekt_SOURCE_DIR}/doc/projekt3.tex"
-    ${PLOTS}
-    ${SPECTRA}
-    ${CONFS}
+    ${BADNESS}
+    ${PRESETS}
+    #${CMP}
   COMMENT
     "Generating LaTeX doc"
   VERBATIM)

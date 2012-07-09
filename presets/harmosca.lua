@@ -25,7 +25,7 @@ config = {
   energy = function(k)
     return omega * (.5 + k)
   end;
-  enrgrange = {0, 200, 6, 1};
+  enrgrange = {0, 150, 6, 1};
   output = {
     dir = "./data/harmosca";
     apsi = "apsi.dat";
@@ -36,5 +36,6 @@ config = {
     numen = "numen.dat";
     splen = "splen.dat";
     aken = "aken.dat";
+    ccsen = "ccsen.dat";
   };
 }

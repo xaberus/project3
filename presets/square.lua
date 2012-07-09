@@ -32,5 +32,6 @@ config = {
     numen = "numen.dat";
     splen = "splen.dat";
     aken = "aken.dat";
+    ccsen = "ccsen.dat";
   };
 }

@@ -723,16 +723,21 @@ array_t * complicated_spline_search(array_t * s, array_t * f, double dE, double 
 
       //array_dump_to_file("prep", " ", 2, ps, pf);
 
+      free(ps);
+      free(pf);
+
       double nz = squares_min_2d(&par);
       if (nz==nz) {
+       if (nd->length) {
+          double o = nd->data[nd->length-1];
+          if (fabs(o - nz) < swin / 10.) {
+            continue;
+          }
+        }
         nd = array_append(nd, nz);
-        free(ps);
-        free(pf);
         continue;
       } else {
         /* received nan */
-        free(ps);
-        free(pf);
       }
     } else {
       assert(0);

@@ -625,101 +625,127 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%% FINAL>>> %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  	  \subsubsection{Asymetrischer Doppeltopf}
+  	  \subsubsection*{Asymetrischer Doppeltopf}
 			  \includegraphics[scale=.62]{../data/simple/init}
-      \newpage
-%%%%%%%%%%%%%%%%%%%%%%%% <<<FINAL %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  		Das erste Potential ist ein einfaches Polynom 4. Ordnung, wobei die
-  		Koeffizienten aus \cite{FFS} entnommen wurden Leider konnte ich die
-  		Ergebnisse von \cite{FFS} nicht für die genannten Parameter reproduzieren, 
-  		die Energien stimmen jedoch für meine Konfiguration mit den gegebenen mehr 
-  		oder weniger überein. (Die Parameter aus \cite{FFS} sind offensichtlich Falsch
-  		ein $\tau = 5.7$ Entspricht einer maximalen simulierbaren Energie von
-  		$\approx 0.551157$, die behaupteten Energien von $~-144$ können also niemals
-  		aus einer Simulation mit diesen Parametern entstanden sein. Man erhält 
-  		widerum ähnliche Werte wenn man sich um 4(!) Größenordnungen von
-  		den agngegebenen Parametern entfernt, d.h. $\tau = \frac{5.7}{1000}$ und
-  		$\xi = \frac{0.825}{10}$).
-  		
-  		
-			Die Parameter werden an die Simulation mit Hilfe eines einfachen
-			Lua-Skripts übergeben, in dem die Tabelle 
-			\lstinline!config! definiert wird.
-			\lstinputlisting[language=Lua]{../presets/simple.lua}
-			Die einzelnen Variablen sind (Grau = optional)
-			
-			\begin{tabular}{ll}
-				\lstinline!bins! & Anzahl der Stützstellen im Ort\\
-				\lstinline!dt!   & einzelner Zeitschritt ($\tau$)\\
-				\lstinline!range!& das betrachtete \\
-				                 & Ortsintervall $[-8,8]$\\
-				\lstinline!steps!& $\tau$ zwischen \\
-				                 & Korrelationsmessungen\\
-				\lstinline!runs!& Anzahl Korrelationsmessungen\\
-				\rowcolor{lightgray}
-				\lstinline!vstep!& Zeitschritte zwischen Frames\\
-				\rowcolor{lightgray}
-				\lstinline!vframes!& Anzahl Frames\\
-				\lstinline!potential(x)!& reelles Potential ($V(x)$)\\
-				\lstinline!psi(x)=z!& Wellefunktion \lstinline!z={x,y}! ($\psi(x)$)\\
-				\rowcolor{lightgray}
-				\lstinline!energie(k)!& exakte Energien $\epsilon_k$\\
-				\lstinline!enrgrange!& betrachteten Energien\\
-        				 & Min.,Max.,\\
-				         & Suchfenster, Suchschranke\\
-				\lstinline!output!& \\
-				\lstinline!.dir!& Ausgebeverzeichnis\\
-				\rowcolor{lightgray}
-				\lstinline!.apsi!& Werte von $\psi(x,t=0)$\\
-				\rowcolor{lightgray}
-				\lstinline!.pot!& Werte von $V(x)$\\
-				\rowcolor{lightgray}
-				\lstinline!.corr!& Werte von $c(t)$\\
-				\rowcolor{lightgray}
-				\lstinline!.dftcorr!& Werte von $\mathcal{F}[cw](\epsilon)$ \\
-				\rowcolor{lightgray}
-				\lstinline!.spectrum!& Peaks: direkte Suche \\
-				\rowcolor{lightgray}
-				\lstinline!.numen!& Numerov Approximation \\
-				\rowcolor{lightgray}
-				\lstinline!.splen!& Peaks: kubische Spline-Suche \\
-				\rowcolor{lightgray}
-				\lstinline!.aken!& Peaks: Akima-Suche \\
-				\rowcolor{lightgray}
-				\lstinline!.ccsen!& Peaks: nichtlineare Regression \\
-			\end{tabular}
-			
-			%\includegraphics[scale=.62]{../simple/corr}
-			%\includegraphics[scale=.62]{../simple/spektrum}
-			
-			%\begin{center}\input{../simple/spectrum.tex.inc}\end{center}
-			
-			Wie schon eingangs erwähnt, leidet die die benutzte Suchmethode an
-			der Diskretisierung, sodass die Werte im Rahmen von $\nicefrac{2\pi}{\tau n}$
-			schwanken.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  	\subsection{Potentialkasten}
-			%\includegraphics[scale=.62]{../square/init}
-			
-			Als nächstes versuche ich bekannte Erbgebnisse für einen
-			unendlich tiefen Potentialkasten näherungsweise zu reproduzieren.
-			Um verglichswerte der Numerov-Approximation zu erhalten, musste ich
-			das Potential auf $1000$ reduzieren, da ich sonst an die grenzen der
-			Genauigkeit des \lstinline!double! Datentyps stoßen würde.
-			
-			%\lstinputlisting[language=Lua]{../square.lua}			
 
-			%\includegraphics[scale=.62]{../square/corr}
-			%\includegraphics[scale=.62]{../square/spektrum}
-			%\begin{center}\input{../square/spectrum.tex.inc}\end{center}
+  		  Das erste Potential ist ein einfaches Polynom 4. Ordnung, wobei die
+    		Koeffizienten aus \cite{FFS} entnommen wurden. Leider konnte ich die
+    		Ergebnisse von \cite{FFS} nicht für die genannten Parameter reproduzieren, 
+  	  	die Energien stimmen jedoch für meine Konfiguration mit den gegebenen mehr 
+  		  oder weniger überein. (Die Parameter aus \cite{FFS} sind offensichtlich falsch
+    		ein $\tau = 5.7$ Entspricht einer maximalen simulierbaren Energie von
+    		$\approx 0.551157$, die behaupteten Energien von $\approx-144$
+  	  	können also niemals
+    		aus einer Simulation mit diesen Parametern entstanden sein. Man erhält 
+    		widerum ähnliche Werte wenn man sich um 4(!) Größenordnungen von
+  	  	den agngegebenen Parametern entfernt, d.h. $\tau = \frac{5.7}{1000}$ und
+  		  $\xi = \frac{0.825}{10}$).
+
+  			Die Parameter werden an die Simulation mit Hilfe eines einfachen
+	  		Lua-Skripts übergeben, in dem die Tabelle 
+		  	\lstinline!config! definiert wird.
+			  \lstinputlisting[language=Lua]{../presets/simple.lua}
+  			Die einzelnen Variablen sind (Grau = optional)
+			
+	  		\begin{tabular}{ll}
+		  		\lstinline!bins! & Anzahl der Stützstellen im Ort\\
+			  	\lstinline!dt!   & einzelner Zeitschritt ($\tau$)\\
+				  \lstinline!range!& das betrachtete \\
+	  			                 & Ortsintervall $[-8,8]$\\
+  				\lstinline!steps!& $\tau$ zwischen \\
+		  		                 & Korrelationsmessungen\\
+			  	\lstinline!runs!& Anzahl Korrelationsmessungen\\
+				  \rowcolor{lightgray}
+  				\lstinline!vstep!& Zeitschritte zwischen Frames\\
+	  			\rowcolor{lightgray}
+		  		\lstinline!vframes!& Anzahl Frames\\
+			  	\lstinline!potential(x)!& reelles Potential ($V(x)$)\\
+				  \lstinline!psi(x)=z!& Wellefunktion \lstinline!z={x,y}! ($\psi(x)$)\\
+  				\rowcolor{lightgray}
+	  			\lstinline!energie(k)!& exakte Energien $\epsilon_k$\\
+		  		\lstinline!enrgrange!& betrachteten Energien:\\
+          				 & Min.,Max.,\\
+				           & Peak-Fenster(in Punkten),\\
+				           & Suchschranke\\
+  				\lstinline!output!& \\
+	  			\lstinline!.dir!& Ausgabeverzeichnis\\
+		  		\rowcolor{lightgray}
+			  	\lstinline!.apsi!& Werte von $\psi(x,t=0)$\\
+				  \rowcolor{lightgray}
+  				\lstinline!.pot!& Werte von $V(x)$\\
+	  			\rowcolor{lightgray}
+		  		\lstinline!.corr!& Werte von $c(t)$\\
+			  	\rowcolor{lightgray}
+  				\lstinline!.dftcorr!& Werte von $\mathcal{F}[cw](\epsilon)$ \\
+	  			\rowcolor{lightgray}
+		  		\lstinline!.spectrum!& Peaks: direkte Suche \\
+			  	\rowcolor{lightgray}
+				  \lstinline!.numen!& Numerov Approximation \\
+  				\rowcolor{lightgray}
+	  			\lstinline!.splen!& Peaks: kubische Spline-Suche \\
+		  		\rowcolor{lightgray}
+			  	\lstinline!.aken!& Peaks: Akima-Suche \\
+				  \rowcolor{lightgray}
+  				\lstinline!.ccsen!& Peaks: nichtlineare Regression \\
+	  		\end{tabular}
+  
+		  	\includegraphics[scale=.62]{../data/simple/corr}
+    		\includegraphics[scale=.62]{../data/simple/spektrum}
+    		
+			  \begin{center}\input{../data/simple/spectrum.tex.inc}\end{center}
+  			
+	  		\includegraphics[scale=.62]{../data/simple/relen}
+		  	
+			  Wie man uas dem letzen Graphen entnehmen kann, wächst
+  			der relative Fehler für größere Energien exponentiell an.
+  			
+  			\paragraph*{Konvergeznverhalten}
 			
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%			
+  	  \subsubsection*{Potentialkasten}
+  			\includegraphics[scale=.62]{../data/square/init}
+  			Als nächstes versuche ich bekannte Erbgebnisse für einen
+	  		unendlich tiefen Potentialkasten näherungsweise mit einem
+	  		endlich hohen  Potentialkasten zu approximieren.
+	  		
+	  		Die konfiguration für die Simulation lautet dementsprechend:
+				\lstinputlisting[language=Lua]{../presets/square.lua}
+				
+		  	\includegraphics[scale=.62]{../data/square/corr}
+    		\includegraphics[scale=.62]{../data/square/spektrum}
+    		
+			  \begin{center}\input{../data/square/spectrum.tex.inc}\end{center}
+			  
+	  		\includegraphics[scale=.62]{../data/square/relen}
+	  		
+	  		Der relative Fehler wird im Gegensatz zum vorgerigen Potential
+	  		kleiner für größere Energien. Wie schon eingangs erwähnt, kann
+	  		mein Verfahren die ersten drei Energien nicht auflösen. Die 
+	  		Ergebnisse der reinen Spline-Suche bzw. Akima-Suche geben zwar einen
+	  		Wert, dieser schwankt aber signifikant um den erwarteten.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	  		
+	  		
+%%%%%%%%%%%%%%%%%%%%%%%% FINAL>>> %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \subsubsection*{Harmonischer Oszillator}
+  			\includegraphics[scale=.62]{../data/harmosca/init}
+			  \lstinputlisting[language=Lua]{../presets/harmosca.lua}
+		
+			  \begin{center}\input{../data/harmosca/spectrum.tex.inc}\end{center}
+			  
+		  	\includegraphics[scale=.62]{../data/harmosca/corr}
+    		\includegraphics[scale=.62]{../data/harmosca/spektrum}
+			  
+	  		\includegraphics[scale=.62]{../data/harmosca/relen}
+	  		
+	  		Auch bei diesem Potential verringert sich der relative Fehler 
+	  		für größere Energiewerte.
+\newpage%%%%%%%%%%%%%%% <<<FINAL%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
   	\subsection{Harmonischer Oszillator}
 			%\includegraphics[scale=.62]{../harmosca/init}
 			

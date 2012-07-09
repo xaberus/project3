@@ -1,7 +1,7 @@
 
 local dump = require "dump"
 
-local tol = .04
+local tol = .02
 
 local abs = math.abs
 
