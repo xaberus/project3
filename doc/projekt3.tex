@@ -462,69 +462,175 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  	\subsection{Suchalgorithmus und sein Grenzen}
-			\includegraphics[scale=.62]{../badness/spektrum}
-			\begin{center}\input{../badness/spectrum.tex.inc}\end{center}
+  	\subsection{Suchalgorithmen}
+  	  \subsubsection*{Direkte Suche}
+  			Dieser Suchalgorithmus stammt von \cite{SAPS} und benutzt die
+  			einfachste Signifikanzfunktion $S_1$. Da dies meistens nicht ausreicht um
+  			alle Peaks zu finden werden nach einer Iteration alle gefundenen Peaks
+	  		innerhalb des zugehörigen Fensters gelöscht (auf \verb!nan! gesetzt), 
+  			worauf eine erneute Iteration folgt, bei der allerdings die Suchschranke 
+	  		(Forderung in Standardabweichungen)
+		  	verdoppelt wird, um eine Konvergenz des Verfahrens zu erzwingen.
 			
-			Für die Auswertung der Potentiale wähte ich einen Suchalgorithmus der sich
-			leider prinzipbedingt als sehr fehleranflällig heraustellen sollte. 
+    		\begin{description}
+    			\item[Start]
+		    		\begin{itemize}
+				    	\item{berechne werte $a_i = S(d_i)$,
+    					  alle Werte $>0$ sind potentielle Peaks}
+		    		\end{itemize}
+    			\item[Iteration]
+		    		\begin{itemize}
+				    	\item{vergrößere peak Fenster $w$ um $1.5$}
+    					\item{verdopple Suchschranke $h$}
+		    			\item{berechne Mittelwert $m$ von $\{a_i\}$}
+				    	\item{berechne Standardabweichung $s$ von $\{a_i\}$}
+    					\item{alle Werte $>0$, die um das h-Fache von $s$
+		    			  abweichen im Fenster eines Peaks}
+				    	\item{verkleinere jedes Fenster solange, 
+    					  bis nur der maximale Wert bleibt;
+		    			  dieser Wert ist der gesuchte Peak}
+				    	\item{breche ab, falls keine Peaks gefunden wurden;
+    					  andernfals lösche alle Peaks aus $\{a_i\}$ 
+		    			  und beginne nächste Iteration}
+				    \end{itemize}
+    		\end{description}
+    		
+    		Dieser Suchalgorithmus stellte sich leider Prinzipbedingt als
+    		unzuverlässig heraus, da einerseits apriori die Standardabweichung
+    		der Peaks erraten werden muss, und andererseits, weil diese
+    		i.A. nicht über das ganze Spektrum gleich bleibt.
+    		
+        \includegraphics[scale=.62]{../data/badness/bspektrum}
 			
-			Der eigentliche Suchalgorithmus stammt von \cite{SAPS} und benutzt die
-			einfachste Signifikanzfunktion $S_1$. Da dies meistens nciht ausreicht um
-			ale Peaks zu finden werden nach einer Iteration alle gefundenen Peaks
-			innerhalb des zugehürigen Fensters mithilfe der Funktion
-			$f(x)=\mathrm{e}^{\nicefrac{w}{|x-x_\mathrm{peak}|}}$ \glqq{gelöscht}\grqq, 
-			worauf eine erneute Iteration folgt, bei der allergins Suchschranke 
-			(Forderung in Standardabweichungen)
-			verdoppelt wird, um eine Konvergenz des Verfahrens zu erzwingen.
-			
-		\begin{description}
-			\item[Start]
-				\begin{itemize}
-					\item{berechne werte $a_i = S(d_i)$,
-					  alle Werte $>0$ sind potentielle Peaks}
-				\end{itemize}
-			\item[Iteration]
-				\begin{itemize}
-					\item{vergrößere peak Fenster $w$ um $1.5$}
-					\item{verdopple Suchschranke $h$}
-					\item{berechne Mittelwert $m$ von $\{a_i\}$}
-					\item{berechne Standardabweichung $s$ von $\{a_i\}$}
-					\item{alle Werte $>0$, die um das h-Fache von $s$
-					  abweichen im Fenster eines Peaks}
-					\item{verkleinere jedes Fenster solange, 
-					  bis nur der maximale Wert bleibt;
-					  dieser Wert ist der gesuchte Peak}
-					\item{breche ab, falls keine Peaks gefunden wurden;
-					  andernfals lösche alle Peaks aus $\{a_i\}$ 
-					  und beginne nächste Iteration}
-				\end{itemize}
-		\end{description}
-			
-		Wie man aus der oberen Abbildung erkennen kann entsprechen sind die
-		gefundenen Peaks nicht immer den tatsächlichen Energiewerten, weil
-		durch die Diskretisierung sich das Maximum deutlich vom richtigen Wert
-		verschieben kann.
+    		Wie man der oberen Abbildung entnehmen kann sind die gefundenen Peaks
+    		außerdem nicht immer nah an den tatsächlichen Energiewerten, weil
+		    durch die Diskretisierung sich das Maximum deutlich vom richtigen Wert
+    		verschieben kann.
 
-		\includegraphics[scale=.62]{../square1/spektrum}
-		
-		Leider schlägt der Algorithmus manchmal sogar komplett fehl, wie hier beim
-		Grundzustand des im weiteren betrachteten Kastenpotentials. Der Peaks befindet
-		sich am Rand und unterschiedet sich nicht all zu sehr von seiner Umbgebung,
-		was dazu führt, dass der Suchalgorithmus ihn ignoriert.
-		
-		
-		Wie schon in der oberen Tabelle werde ich im Weiteren die gefundenen
+    		Leider schlägt der Algorithmus manchmal sogar komplett fehl, wie beim
+    		Grundzustand des im weiteren betrachteten Kastenpotentials.
+    		Der Peak befindet	sich am Rand und unterschiedet sich nicht all
+    		zu sehr von seiner Umbgebung,	was dazu führt, dass der Suchalgorithmus
+    		ihn ignoriert.
+    		
+    	\subsubsection*{Akima-Suche}
+    	  Die Suche mit Hilfe der Akima Interpolation verläuft flgendermaßen:
+    	  Durch die Punkte des Spektrums wird eine Akima-Interpolierende gelegt,
+    	  d.h. es werden die Koeffizienten der Interpolation berechnet.
+    	  
+    	  Aus der Formel für die Interpolierende
+    	  
+    	  \begin{multline*}
+    	    S_i(x) = a_i + b_i(x-x_i)+c_i(x-x_i)^2+d_i(x-x_i)^3 \\
+     	    S_i'(x) = b_i+2 c_i(x-x_i)+3 d_i(x-x_i)^2 \\
+     	    S_i''(x) = 2 c_i+6 d_i(x-x_i)
+    	  \end{multline*}
+    	  
+    	  kann man direkt die möglichen Nullstellen der Ableitung berechnen:
+    	  
+        \begin{equation}
+          x_{\pm} = \frac{\pm\sqrt{c_i^2-3 b_i d_i}-c_i+3 d x_i }{3 d_i}
+        \end{equation}
+
+        Sofern einer dieser Werte in dem Intervall $[x_i;x_{i+1}]$ liegt,
+        wird mit der zweiten Ableitung verifiziert, ob es sich tatsächlich
+        um ein Maximum handelt.
+        
+        Der Algorithmus ist relativ robust und findet alle Peaks ohne
+        falsche Positive zu generieren. Allerdings leidet wegen des Verzichts 
+        auf Stetigkeit der zweiten Ableitung die Genauigkeit.
+      
+    	\subsubsection*{Kubische Spline-Suche}
+    	  Analog zur Akima-Suche werden auch hier die Koeffizienten der
+    	  Spline-Interpolierenden berechnet.
+    	  
+    	  \begin{multline*}
+          P_i(x)=
+            (x-x_i) \left(\frac{a_i h_i}{6} -\frac{f_i}{h_i}\right)
+            +\frac{(x-x_i)^3}{6 h_i}a_{i+1}
+            \\
+            +(x-x_i ) \left(\frac{f_{i+1}}{h_i}-\frac{a_{i+1} h_i}{6}\right)
+            -\frac{(x-x_{i+1})^3}{6 h_i}a_i \\
+          P'_i(x)=
+            \left(\frac{a_i h_i}{6} -\frac{f_i}{h_i}\right)
+            +\frac{(x-x_i)^2}{2 h_i}a_{i+1}
+            \\
+            +\left(\frac{f_{i+1}}{h_i}-\frac{a_{i+1} h_i}{6}\right)
+            -\frac{(x-x_{i+1})^2}{2 h_i}a_i \\
+          P''_i(x)=
+            \frac{(x-x_i)}{h_i}a_{i+1}
+            -\frac{(x-x_{i+1})}{h_i}a_i \\
+    	  \end{multline*}
+    	  
+    	Die Nullstellen der Ableitung sind damit:
+
+      \begin{multline}
+        r = (6 a_{i+1} x_i-6 a_i x_{i+1})^2 -4 (3 a_i-3 a_{i+1})\cdot\\
+        \cdot\left(-a_i h_i^2+a_{i+1} h_i^2-3 a_{i+1} x_i^2+3 a_i x_{i+1}^2+6 f_i-6
+        f_{i+1}\right) \\
+        x_{\pm} = \frac{\pm\sqrt{r}-6 a_{i+1} x_i+6 a_i x_{i+1}}{6 (a_i-a_{i+1})}
+       \end{multline}
+       
+       So wie auch bei der Akima Interpolation wird anschließend entschieden, ob
+       die becheneten Punkte Maxima sind, und zu den Peaks gehören.
+       
+       Obwohl dieser Algorithmus bessere Werte liefert als die Akima-Suche,
+       Produziert er einige falsche Positive und manchaml doppelte Punkte
+       innerhalb einzelner Peaks.
+       
+     \subsubsection*{Nichtlineare Regression}
+       Die die vorherigen Algorithmen leider keine zufriedenstellende Ergebnisse
+       lieferten, musste ich mir völlig neues Terrain betreten und einen Weg
+       finden, die Peaks exakter zu vermessen.
+       
+       Die Idee hier ist einfach: Die Peaks im logarithmischen Spektrum
+       liegen meistens im Verhältnis zu ihrer Breite weit außeinander.
+       Sie können darum näherungsweise durch eine Kombination aus
+       einem Lorentz- und Gauß-Profil beschrieben werden.
+
+       Die Modellfunktion ist also:
+       \begin{equation}
+         m(x, a) = \frac{a^2}{\mathrm{e}^{x^2/a^2} (a^2 + x^2)}
+       \end{equation}
+       
+       \includegraphics[scale=.62]{../static/model.pdf}
+       
+       Das Verfahren, das sich hier also anbietet ist, mit Hilfe der
+       Spline-Suche ein vorläufiges Spektrum zu berechnen, und daraus
+       einzelne Peaks auf einem vom Spektrum abhängendem Fenster isolieren.
+       Anschließend Normiert man den Peak innerhalb des Fensters und minimiert
+       die Funktion
+       
+       \begin{equation}
+         \mathrm{ls}(x,a) = \sum_{i = 0}^{k} (m(x_i - x, a) - f_i)^2
+       \end{equation}
+       
+       bezüglich $a$, wobei man für $x=x^{(0)}$ den Wert aus der Spline-Suche
+       benutzt. Auf diese Weise bekommt man den Wert $a^{(0)}$, mit dem man
+       nun $\mathrm{ls}$ nach $x$ minimeiren kann und $x^{(1)}$ erhält.
+       Falls $x^{(0)}$ nah
+       am Peak-Mittelpunkt war, dann konvergiert dieses Verfahren seher schnell
+       gegen den gesuchten Peak-Mittelpunkt $x_\mathrm{m}$.
+       
+       Die Grenzen dieses Verfahrens liegen natürlich genau dort, wo die
+       Voraussetzung verletzt wird, dass die Peaks isoliert sind. 
+       (Deswegen dann dieses Verfahren den Grundzustand des Kastenpotentials 
+       ebenfalls nicht auflösen.)
+       
+   \subsection{Spektra}
+		Wie schon in der oben angedeutet werde ich im Weiteren die gefundenen
 		Energiewerte mit der Numerov-Approximation für die stationäre 
-		Schrödingergleichung vergleichen. (Das hat den Nachteil, dass man die
-		Potentiale nur relativ kleine werte annehmen müssen, damit die Approximation
-		noch innerhalb der doppelten Genauigkeit berechnet werden kann.)
+		Schrödingergleichung vergleichen.
 		
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  	\subsection{Asymetrischer Doppeltopf}
-			\includegraphics[scale=.62]{../simple/init}
+
+%%%%%%%%%%%%%%%%%%%%%%%% FINAL>>> %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  	  \subsubsection{Asymetrischer Doppeltopf}
+			  \includegraphics[scale=.62]{../data/simple/init}
+      \newpage
+%%%%%%%%%%%%%%%%%%%%%%%% <<<FINAL %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   		Das erste Potential ist ein einfaches Polynom 4. Ordnung, wobei die
   		Koeffizienten aus \cite{FFS} entnommen wurden Leider konnte ich die
   		Ergebnisse von \cite{FFS} nicht für die genannten Parameter reproduzieren, 
@@ -541,14 +647,16 @@
 			Die Parameter werden an die Simulation mit Hilfe eines einfachen
 			Lua-Skripts übergeben, in dem die Tabelle 
 			\lstinline!config! definiert wird.
-			\lstinputlisting[language=Lua]{../simple.lua}
+			\lstinputlisting[language=Lua]{../presets/simple.lua}
 			Die einzelnen Variablen sind (Grau = optional)
 			
 			\begin{tabular}{ll}
 				\lstinline!bins! & Anzahl der Stützstellen im Ort\\
 				\lstinline!dt!   & einzelner Zeitschritt ($\tau$)\\
-				\lstinline!range!& das betrachtete Ortsintervall $[-8,8]$\\
-				\lstinline!steps!& $\tau$ zwischen Korrelationsmessungen\\
+				\lstinline!range!& das betrachtete \\
+				                 & Ortsintervall $[-8,8]$\\
+				\lstinline!steps!& $\tau$ zwischen \\
+				                 & Korrelationsmessungen\\
 				\lstinline!runs!& Anzahl Korrelationsmessungen\\
 				\rowcolor{lightgray}
 				\lstinline!vstep!& Zeitschritte zwischen Frames\\
@@ -559,19 +667,34 @@
 				\rowcolor{lightgray}
 				\lstinline!energie(k)!& exakte Energien $\epsilon_k$\\
 				\lstinline!enrgrange!& betrachteten Energien\\
-				 & Min.,Max.,Suchfenster, Suchschranke\\
+        				 & Min.,Max.,\\
+				         & Suchfenster, Suchschranke\\
 				\lstinline!output!& \\
 				\lstinline!.dir!& Ausgebeverzeichnis\\
+				\rowcolor{lightgray}
 				\lstinline!.apsi!& Werte von $\psi(x,t=0)$\\
+				\rowcolor{lightgray}
 				\lstinline!.pot!& Werte von $V(x)$\\
+				\rowcolor{lightgray}
 				\lstinline!.corr!& Werte von $c(t)$\\
+				\rowcolor{lightgray}
 				\lstinline!.dftcorr!& Werte von $\mathcal{F}[cw](\epsilon)$ \\
-				\lstinline!.spectrum!& gefundene Peaks \\
+				\rowcolor{lightgray}
+				\lstinline!.spectrum!& Peaks: direkte Suche \\
+				\rowcolor{lightgray}
+				\lstinline!.numen!& Numerov Approximation \\
+				\rowcolor{lightgray}
+				\lstinline!.splen!& Peaks: kubische Spline-Suche \\
+				\rowcolor{lightgray}
+				\lstinline!.aken!& Peaks: Akima-Suche \\
+				\rowcolor{lightgray}
+				\lstinline!.ccsen!& Peaks: nichtlineare Regression \\
 			\end{tabular}
 			
-			\includegraphics[scale=.62]{../simple/corr}
-			\includegraphics[scale=.62]{../simple/spektrum}
-			\begin{center}\input{../simple/spectrum.tex.inc}\end{center}
+			%\includegraphics[scale=.62]{../simple/corr}
+			%\includegraphics[scale=.62]{../simple/spektrum}
+			
+			%\begin{center}\input{../simple/spectrum.tex.inc}\end{center}
 			
 			Wie schon eingangs erwähnt, leidet die die benutzte Suchmethode an
 			der Diskretisierung, sodass die Werte im Rahmen von $\nicefrac{2\pi}{\tau n}$
@@ -580,7 +703,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   	\subsection{Potentialkasten}
-			\includegraphics[scale=.62]{../square/init}
+			%\includegraphics[scale=.62]{../square/init}
 			
 			Als nächstes versuche ich bekannte Erbgebnisse für einen
 			unendlich tiefen Potentialkasten näherungsweise zu reproduzieren.
@@ -588,23 +711,23 @@
 			das Potential auf $1000$ reduzieren, da ich sonst an die grenzen der
 			Genauigkeit des \lstinline!double! Datentyps stoßen würde.
 			
-			\lstinputlisting[language=Lua]{../square.lua}			
+			%\lstinputlisting[language=Lua]{../square.lua}			
 
-			\includegraphics[scale=.62]{../square/corr}
-			\includegraphics[scale=.62]{../square/spektrum}
-			\begin{center}\input{../square/spectrum.tex.inc}\end{center}
+			%\includegraphics[scale=.62]{../square/corr}
+			%\includegraphics[scale=.62]{../square/spektrum}
+			%\begin{center}\input{../square/spectrum.tex.inc}\end{center}
 			
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   	\subsection{Harmonischer Oszillator}
-			\includegraphics[scale=.62]{../harmosca/init}
+			%\includegraphics[scale=.62]{../harmosca/init}
 			
-			\lstinputlisting[language=Lua]{../harmosca.lua}
+			%\lstinputlisting[language=Lua]{../harmosca.lua}
 			
-			\includegraphics[scale=.62]{../harmosca/corr}
-			\includegraphics[scale=.62]{../harmosca/spektrum}
-			\begin{center}\input{../harmosca/spectrum.tex.inc}\end{center}
+			%\includegraphics[scale=.62]{../harmosca/corr}
+			%\includegraphics[scale=.62]{../harmosca/spektrum}
+			%\begin{center}\input{../harmosca/spectrum.tex.inc}\end{center}
 
 	\section{Fazit}
 		Wie man aus der betrachtung der Spektra entnehmen kann, erlaubt die

@@ -18,7 +18,7 @@ Emin=`cut -d: -f 15 stats`
 Emax=`cut -d: -f 16 stats`
 
 set terminal pdfcairo enhanced solid size 13cm,8cm
-set output "spektrum.pdf"
+set output "bspektrum.pdf"
 
 set grid x y2
 set key center top title " "

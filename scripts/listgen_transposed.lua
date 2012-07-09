@@ -146,10 +146,20 @@ for k, row in ipairs(vlst) do
   end
 end
 
+io.stderr:write(string.format("pts '%d [%d]'\n", #trans[1], #args))
+
+write("#")
 for k, row in ipairs(trans) do
-  for j, value in ipairs(row) do
+  write("%.17e ", row[1])
+end
+write("\n")
+--for j=1, #trans[1], 1 do
+for j=2, #trans[1], 1 do
+  for k, row in ipairs(trans) do
     if value ~= "" then
-      write("%11.10g ", value)
+      write("%.17e ", (row[j]-row[1])/row[1])
+      --write("%11.10g ", row[j])
+      --write("%.17e ", row[j])
     end
   end
   write("\n")

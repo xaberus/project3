@@ -7,7 +7,7 @@ config = {
   bins = 4096;
   dt = 0.0001;
   range = {-8,8};
-  steps = 10; runs = 60000;
+  steps = 10; runs = 150000;
   vstep = 1; vframes = 1;
   --
   potential = function(x)

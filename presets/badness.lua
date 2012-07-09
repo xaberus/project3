@@ -22,7 +22,7 @@ config = {
     local a, s = 1.9, 0.87
     return {exp(-(x-a)^2/(2*s^2)),exp(-(x+a)^2/(2*s^2))}
   end;
-  enrgrange = {-139, -137.8, 6, 1.5};
+  enrgrange = {-139.5, -137, 6, 1};
   output = {
     dir = "./data/badness";
     apsi = "apsi.dat";

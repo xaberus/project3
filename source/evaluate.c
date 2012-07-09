@@ -35,6 +35,7 @@
 #include <pthread.h>
 
 #include "simulation.h"
+#include "numerov.h"
 
 #include <assert.h>
 
@@ -74,14 +75,20 @@ int main(int argc, char * argv[argc])
           int len = strlen(prefs->output.dir) + 100;
           char path[len];
 
+          array_t * numen = numerov_energies(prefs->dx, prefs->potential,
+            prefs->enrgrange.min, prefs->enrgrange.max);
+          snprintf(path, len, "%s/%s", prefs->output.dir, prefs->output.numen);
+          array_dump_to_file(path, " ", 1, numen);
+          free(numen);
+
           carray_t * co = prefs->results->co;
 
-          int num = prefs->runs / 10000;
+          int num = prefs->runs / 1000;
 
           for (int length = 10000; length <= co->length; length += co->length / num) {
             carray_t * c = carray_pcopy(length, co->data);
 
-            double hannfkt = 2 * M_PI/(length);
+            double hannfkt = 2 * M_PI/(length - 1);
             for (int k = 0; k < length; k++) {
               complex double z = c->data[k];
               co->data[k] = z; // save original function
@@ -108,6 +115,8 @@ int main(int argc, char * argv[argc])
             array_dump_to_file(path, " ", 1, spec->splen);
             snprintf(path, len, "%s/a-%d.dat", prefs->output.dir, length);
             array_dump_to_file(path, " ", 1, spec->aken);
+            snprintf(path, len, "%s/c-%d.dat", prefs->output.dir, length);
+            array_dump_to_file(path, " ", 1, spec->ccsen);
 
             spectra_free(spec);
 

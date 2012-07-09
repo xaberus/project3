@@ -307,6 +307,8 @@ foreach(PRESET ${PRESETS})
 endforeach()
 
 foreach(CM ${CMP})
+  message("adding cmp ${CM}")
+
   set(PRESET_LUA "${projekt_SOURCE_DIR}/presets/${CM}.lua")
 
   get_lua_var(${PRESET_LUA} "config.output.dir" CONFIG_DIR)
@@ -337,7 +339,9 @@ foreach(CM ${CMP})
 endforeach()
 
 foreach(BAD ${BADNESS})
-  message("adding badness ${BAD}")
+  message("adding bad ${BAD}")
+
+  set(PRESET_LUA "${projekt_SOURCE_DIR}/presets/${BAD}.lua")
 
   get_lua_var(${PRESET_LUA} "config.output.dir" CONFIG_DIR)
 
@@ -388,8 +392,7 @@ add_custom_command(
     "Generating LaTeX doc"
   VERBATIM)
 
-add_custom_target(bad
-  DEPENDS ${BDEP})
+add_custom_target(bad DEPENDS ${BDEP})
 
 add_custom_target(doc
   DEPENDS

@@ -8,7 +8,7 @@ local pi = math.pi
 config = {
   bins = 4096;  dt = 0.0001;
   range = {-5,15};
-  steps = 10; runs = 50000;
+  steps = 10; runs = 150000;
   vstep = 100; vframes = 200;
   --
   potential = function(x)
