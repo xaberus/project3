@@ -20,8 +20,6 @@ set(PRESETS
   "simple"
   "square"
   "harmosca"
-
-  ${BADNESS}
 )
 
 #set(CMAKE_VERBOSE_MAKEFILE true)
@@ -366,8 +364,48 @@ foreach(BAD ${BADNESS})
   set(PRESET_LUA "${projekt_SOURCE_DIR}/presets/${BAD}.lua")
 
   get_lua_var(${PRESET_LUA} "config.output.dir" CONFIG_DIR)
+  get_lua_var(${PRESET_LUA} "config.output.apsi" CONFIG_APSI)
+  get_lua_var(${PRESET_LUA} "config.output.pot" CONFIG_POT)
+  get_lua_var(${PRESET_LUA} "config.output.corr" CONFIG_CORR)
+  get_lua_var(${PRESET_LUA} "config.output.dftcorr" CONFIG_DFTCORR)
+  get_lua_var(${PRESET_LUA} "config.output.spectrum" CONFIG_SPECTRUM)
+  get_lua_var(${PRESET_LUA} "config.output.numen" CONFIG_NUMEN)
+  get_lua_var(${PRESET_LUA} "config.output.splen" CONFIG_SPLEN)
+  get_lua_var(${PRESET_LUA} "config.output.aken" CONFIG_AKEN)
+  get_lua_var(${PRESET_LUA} "config.output.ccsen" CONFIG_CCSEN)
 
   set(BAD_DIR "${projekt_SOURCE_DIR}/${CONFIG_DIR}")
+
+  add_custom_command(
+    OUTPUT
+      "${BAD_DIR}/result.dat"
+    COMMAND
+      mkdir -p "${BAD_DIR}"
+    COMMAND
+      env
+        "'LUA_PATH=${LUA_SCRIPTS}'"
+        $<TARGET_FILE:simulate>
+        ${PRESET_LUA}
+        "${BAD_DIR}/result.dat"
+    MAIN_DEPENDENCY
+      ${PRESET_LUA})
+
+    add_custom_command(
+      OUTPUT
+        "${BAD_DIR}/${CONFIG_APSI}"
+        "${BAD_DIR}/${CONFIG_CORR}"
+        "${BAD_DIR}/${CONFIG_DFTCORR}"
+        "${BAD_DIR}/${CONFIG_POT}"
+        "${BAD_DIR}/${CONFIG_SPECTRUM}"
+        "${BAD_DIR}/${CONFIG_NUMEN}"
+        "${BAD_DIR}/stats"
+      COMMAND
+        env "'LUA_PATH=${LUA_SCRIPTS}'" $<TARGET_FILE:evaluate>
+          ${PRESET_LUA}
+          "${BAD_DIR}/result.dat"
+      MAIN_DEPENDENCY
+        ${PRESET_LUA}
+        "${BAD_DIR}/result.dat")
 
   add_custom_command(
     OUTPUT
@@ -382,8 +420,11 @@ foreach(BAD ${BADNESS})
       "${BAD_DIR}/${CONFIG_SPECTRUM}"
       "${BAD_DIR}/${CONFIG_NUMEN}")
   set(BDEP
-    ${BDEP} "${BAD_DIR}/bspektrum.pdf"
-    "${BAD_DIR}/spectrum.tex.inc")
+    ${BDEP} "${BAD_DIR}/bspektrum.pdf")
+
+  add_custom_target(${BAD}
+    DEPENDS
+      "${BAD_DIR}/bspektrum.pdf")
 endforeach()
 
 add_custom_command(
