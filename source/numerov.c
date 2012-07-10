@@ -60,8 +60,6 @@ long double numerov_integrate(long double E, void * arg)
   return psi2;
 }
 
-FILE * logg = NULL;
-
 /* newton: secant method
  * seek for zero in the intervall, with wt most one change of sign of first derrivative of fn */
 double search_zero(long double (*fn)(long double, void*), void * arg, double min, double step, double max, double fmax) {
@@ -79,7 +77,6 @@ double search_zero(long double (*fn)(long double, void*), void * arg, double min
     fm = fn(xm, arg)/fmax;
     df = (f-fm);
     if (df == 0.0) { // worst case scenario....
-      //if (logg) fprintf(logg, "bisect (zero)\n");
       goto bisect;
     }
 
@@ -87,10 +84,7 @@ double search_zero(long double (*fn)(long double, void*), void * arg, double min
     xp = x - (x - xm)/df*f;
     //printf("sz: [%.17g;%.17g]:%.17g {%.17g, %.17g, %.17g}\n", min, max, step, xm, x, xp);
     //printf("sz: [%g,%g]:%g {%g, %g, %g}\n", min, max, step, xm, x, xp);
-    //if (logg) fprintf(logg, "sz: [%g:%g] : %Lg {%Lg, %Lg, %Lg}\n", min, max, pp, xm, x, xp);
-    //if (logg) fprintf(logg, "%.17Le %.17Le %.17Le 0\n", x, f, xp - x);
     if (xp > max || xp < min) {
-      //if (logg) fprintf(logg, "bisect (range)\n");
       goto bisect;
     }
     if (x == xp) {
@@ -107,7 +101,6 @@ bisect:
       if (a * b < 0) {
         long double t = (min + max) / 2.;
         long double w = fn(t, arg) / fmax;
-        if (logg) fprintf(logg, "bis: [%.17e:%.17Le:%.17e] ~ {%Lg, %Lg, %Lg}\n", min, t, max, a, w, b);
         if (w == 0) {
           return t;
         }
@@ -186,9 +179,8 @@ array_t * numerov_energies(double dx, array_t * V, double min, double max)
   array_t * Epos = array_equipart(min, max, res);
   array_t * fn = array_mapv(Epos, numerov_integrate, &num);
 
-  array_dump_to_file("score", " ", 2, Epos, fn);
+  //array_dump_to_file("score", " ", 2, Epos, fn);
 
-#if 1
   double smin, smax, z = 0;
   array_t * sc = search_der_sign_change_3(Epos->data[1] - Epos->data[0], fn, 0, 0, 0);
 
@@ -199,21 +191,6 @@ array_t * numerov_energies(double dx, array_t * V, double min, double max)
   fclose(fp);*/
 
   double eres = 0.00000001;
-
-#if 1
-  logg = fopen("log", "w");
-  fprintf(logg, "1231313\n");
-  search_zero(numerov_integrate, &num,
-              //-144.96717457613539, eres, -144.96545131470518
-              //-146, eres, -145.8
-              -136.82988463651347, eres, -132.84636513459074
-              //-108.72018068611891, eres, -106.28714442680992
-              //-134.8329874252228, 0.0000001, -132.84556220241728
-              //4.071293413904657, 0.0000001, 5.4263565891472867
-              , 1);
-  fclose(logg); logg = NULL;
-#endif
-
 
   if (sc->length > 0) {
     // we have changes of sign at sc[n], between each we must seek for zeros
@@ -255,27 +232,6 @@ array_t * numerov_energies(double dx, array_t * V, double min, double max)
   }
 
   free(sc);
-
-#else
-  for (int k = 0; k < fn->length - 1; k++) {
-    double f1 = fn->data[k];
-    double f2 = fn->data[k + 1];
-    if (f1 == 0.) {
-      zp = array_append(zp, Epos->data[k]);
-    } else if (f2 == 0.) {
-      zp = array_append(zp, Epos->data[k + 1]);
-    } else if ((f1 < 0. && f2 > 0.) || (f1 > 0. && f2 < 0.)) {
-      printf("here!\n");
-      double e1 = Epos->data[k];
-      double e2 = Epos->data[k + 1];
-      double er = 0.0000001;
-      double z = search_zero(numerov_integrate, &num, e1, er, e2, getmaxabs(fn, 0, fn->length-1));
-      if (z == z) {
-        zp = array_append(zp, z);
-      }
-    }
-  }
-#endif
 
   free(Epos);
   free(fn);

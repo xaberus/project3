@@ -611,6 +611,8 @@ double lorentz_gauss_ddda(double x, double a)
    (pow(a,7)*exp(xx/aa)*pow(aa + xx,4));
 }
 
+/*! runs a nonlinear least square regression on isolated peaks
+ */
 array_t * complicated_spline_search(array_t * s, array_t * f, double dE, double win)
 {
   /*array_t * h = array_intervalls(s);
