@@ -106,8 +106,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	\section{Split-Operator Methode}
 		Die Split-Operator Methode ist ein Verfahren zur numerischen Approximation
-		von Lösungen der Schrödingergleichung in kartesichen Koordinaten. Zur Vereinfachung
-		der Berechnungen setze ich verwende ich die Konvention $\hbar = 1$, $m=\frac{1}{2}$.
+		von Lösungen der zeitabhängigen Schrödingergleichung 
+		in kartesichen Koordinaten. Zur Vereinfachung
+		der Berechnungen verwende ich die Konvention $\hbar = 1$, $m=\frac{1}{2}$.
 		Damit erhält man eine einfache Form, der linearen DGL:
 
 		\begin{align*}
@@ -123,13 +124,13 @@
 		\begin{equation*}
 			\left(T + V(t)\right) U(t) = i  \frac{\partial}{\partial t}U(t)
 		\end{equation*}
-		Die formale Lösung dieser Gleichung ist bekannterweise die Dyson Reihe, oder etwas
-		weniger allgemein für verschiedene Zeiten mit sich selbst kommutierenden
+		Die formale Lösung dieser Gleichung ist bekannterweise die Dyson-Reihe, oder etwas
+		weniger allgemein, für verschiedene Zeiten mit sich selbst kommutierenden
 		Hammiltonian $H(t)=T+V(t)$, $[H(t),H(t')]=0$ ist:
 		\begin{equation*}
 			U(t)=\exp\left(\int_{0}^{t}{-i (T+V(t')) \mathrm{d} t'}\right)
 		\end{equation*}
-		Falls sich das Potential für kleine Zetdiffrenzen $\tau$ nur geringfügig ändert oder
+		Falls sich das Potential für kleine Zeitdiffrenzen $\tau$ nur geringfügig ändert oder
 		sogar stets konstant ist, sodass $[H(t),H(t+\tau)]\approx 0$ gilt, geht diese Lösung
 		in das Operator-Exponential über:
 		\begin{equation*}
@@ -205,7 +206,7 @@
 		\label{it:hV}
 			U_{\frac{V}{2}}(\tau) \psi(x) &= \mathrm{e}^{-i \frac{\tau}{2} V(x)} \psi(x)\\
 		\label{it:T}
-			U_T(\tau) \psi(x) &= \mathcal{F}^{-1} \mathrm{e}^{-i \tau k^2} \mathcal{F} \psi(x)
+			U_T(\tau) \psi(x) &= \mathcal{F}^{*} \mathrm{e}^{-i \tau k^2} \mathcal{F} \psi(x)
 		\end{align}
 		wobei $\mathcal{F}$ die Fouriertransformation ist.
 
@@ -240,7 +241,7 @@
 		\textbf{Bemerkung:} Es hindert einen niemend daran die Rollen von T und V zu
 		vertauschen	und statt $\tilde{U}$ den Operator
 		$U_{\frac{T}{2}}(\tau) U_V(\tau) U_{\frac{T}{2}}(\tau)$ zu verwenden. Der einzige
-		Unterschied ist eine zurätliche Fouriertransformation am Anfang und eine
+		Unterschied ist eine zusätliche Fouriertransformation am Anfang und eine
 		inverse Fouriertransformation am Ende des Algorithmus, die mir angesichts der
 		eher kurzen Iterationen für dieses Projekt unangebracht erschienen.
 
@@ -258,23 +259,22 @@
 		Zeit-Propagator formal einfach auswerten zu:
 		\begin{equation*}
 			U(t)=\exp\left(
-				-i t \int_{\sigma(H)}{\epsilon \mathrm{d}\mu(\epsilon)}
+				-i t \int_{\sigma(H)}{\epsilon \mu(\mathrm{d}\epsilon)}
 			\right)
-			=\int_{\sigma(H)}{\mathrm{e}^{-i t \epsilon} \mathrm{d}\mu(\epsilon)}
+			=\int_{\sigma(H)}{\mathrm{e}^{-i t \epsilon} \mu(\mathrm{d}\epsilon)}
 		\end{equation*}
 		Für die Autokorrelationsfunktion $c(t)$
 		gilt dann dementsprechend:
 		\begin{multline}
 			\label{eq:corr}
 			c(t) = \langle \psi,U(t) \psi\rangle
-					 = \int_{x} \psi^{*} U(t) \psi \\
-					 = \int_{x} \psi^{*}
-					 	  \int_{\sigma(H)}{\mathrm{e}^{-i t \epsilon}
-					 	 	   \mathrm{d}\mu(\epsilon)} \psi \\
+					 = \int_{x} \mu(\mathrm{d}x) \psi^{*} U(t) \psi \\
+					 = \int_{x}  \mu(\mathrm{d}x) \psi^{*}
+					 	  \int_{\sigma(H)}{\mu(\mathrm{d}\epsilon) \mathrm{e}^{-i t \epsilon}} \psi \\
 					 = \int_{\sigma(H)}{
 					 			\mathrm{e}^{-i t \epsilon}
-					 			\int_{x} \psi^{*}
-					 	 	   \mathrm{d}\mu(\epsilon)} \psi \\
+					 			\int_{x}  \mu(\mathrm{d}x) \psi^{*}
+					 	 	   \mu(\mathrm{d}\epsilon)} \psi \\
 					 = \int_{\sigma(H)}{
 					 			\mathrm{e}^{-i t \epsilon}
 					 			\mathrm{d} \tilde{\mu}(\epsilon)}
@@ -300,8 +300,8 @@
 		Um die Bedeutung von $c(\epsilon)$ besser zu verstehen, betrachte man einen
 		etwas weniger allgemeinen Fall eines Systems mit isolierten Eigenwerten
 		($H$ kompakt und normal da selbtstadjungiert). In einer Basis in der
-		dieser Hamiltonian diagonal ist hat jeder Zustand zie Zerlegung
-		$\psi=\sum_{j}{a_j e_j}$ mit Eigenfunktionen $e_j$ zu Eigenenergie $\epsilon_j$.
+		dieser Hamiltonian diagonal ist hat jeder Zustand besitzt eine Zerlegung
+		$\psi=\sum_{j}{a_j e_j}$ mit Eigenfunktionen $e_j$ zu Eigenenergieen $\epsilon_j$.
 		Die Autokorrelation ist nach \eqref{eq:corr}
 		$c(t)= \sum_{j} |a_j|^2 \mathrm{e}^{-i t \epsilon_j}$ und das modulierte Spektrum
 		ist damit nach \eqref{eq:corrft}:
@@ -440,13 +440,13 @@
 		\begin{equation}
 		\label{eq:idft}
 			x_k
-			= \tilde{\mathcal{F}^{-1}}[\hat{x}]_k
+			= \tilde{\mathcal{F}^{*}}[\hat{x}]_k
 			= N \sum_{\alpha=0}^{n-1} \hat{x}_\alpha \mathrm{e}^{+ i 2\pi \frac{\alpha}{n} k}
 		\end{equation}
 
 		Durch Einsetzen bekommt man dann direkt:
 		\begin{multline*}
-			\tilde{\mathcal{F}^{-1}}[\tilde{\mathcal{F}}[x]]_k
+			\tilde{\mathcal{F}^{*}}[\tilde{\mathcal{F}}[x]]_k
 			= N^2 \sum_{\alpha=0}^{n-1}
 				\sum_{m=0}^{n-1} x_m \mathrm{e}^{- i 2\pi \frac{m}{n} \alpha}
 		 	\mathrm{e}^{+ i 2\pi \frac{\alpha}{n} k} \\
@@ -572,7 +572,7 @@
        \end{multline}
        
        So wie auch bei der Akima Interpolation wird anschließend entschieden, ob
-       die becheneten Punkte Maxima sind, und zu den Peaks gehören.
+       die berecheneten Punkte Maxima sind, also zu den Peaks gehören.
        
        Obwohl dieser Algorithmus bessere Werte liefert als die Akima-Suche,
        Produziert er einige falsche Positive und manchaml doppelte Punkte
@@ -597,7 +597,7 @@
        
        Das Verfahren, das sich hier also anbietet ist, mit Hilfe der
        Spline-Suche ein vorläufiges Spektrum zu berechnen, und daraus
-       einzelne Peaks auf einem vom Spektrum abhängendem Fenster isolieren.
+       einzelne Peaks auf einem vom Spektrum abhängendem Fenster zu isolieren.
        Anschließend Normiert man den Peak innerhalb des Fensters und minimiert
        die Funktion
        
@@ -635,7 +635,7 @@
   	  	die Energien stimmen jedoch für meine Konfiguration mit den gegebenen mehr 
   		  oder weniger überein. (Die Parameter aus \cite{FFS} sind offensichtlich falsch
     		ein $\tau = 5.7$ Entspricht einer maximalen simulierbaren Energie von
-    		$\approx 0.551157$, die behaupteten Energien von $\approx-144$
+    		$\approx \pm0.551157$, die behaupteten Energien von $\approx-144$
   	  	können also niemals
     		aus einer Simulation mit diesen Parametern entstanden sein. Man erhält 
     		widerum ähnliche Werte wenn man sich um 4(!) Größenordnungen von
@@ -653,7 +653,7 @@
 			  	\lstinline!dt!   & einzelner Zeitschritt ($\tau$)\\
 				  \lstinline!range!& das betrachtete \\
 	  			                 & Ortsintervall $[-8,8]$\\
-  				\lstinline!steps!& $\tau$ zwischen \\
+  				\lstinline!steps!& Zeitschritte zwischen \\
 		  		                 & Korrelationsmessungen\\
 			  	\lstinline!runs!& Anzahl Korrelationsmessungen\\
 				  \rowcolor{lightgray}
@@ -661,7 +661,7 @@
 	  			\rowcolor{lightgray}
 		  		\lstinline!vframes!& Anzahl Frames\\
 			  	\lstinline!potential(x)!& reelles Potential ($V(x)$)\\
-				  \lstinline!psi(x)=z!& Wellefunktion \lstinline!z={x,y}! ($\psi(x)$)\\
+				  \lstinline!psi(x)={u,v}!& Wellefunktion $\psi(x)=u+i v$\\
   				\rowcolor{lightgray}
 	  			\lstinline!energie(k)!& exakte Energien $\epsilon_k$\\
 		  		\lstinline!enrgrange!& betrachteten Energien:\\
@@ -697,7 +697,7 @@
   			
 	  		\includegraphics[scale=.62]{../data/simple/relen}
 		  	
-			  Wie man uas dem letzen Graphen entnehmen kann, wächst
+			  Wie man aus dem letzen Graphen entnehmen kann, wächst
   			der relative Fehler für größere Energien an.
   			
   			\paragraph*{Konvergeznverhalten}
@@ -740,6 +740,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%% FINAL>>> %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       \subsubsection*{Harmonischer Oszillator}
   			\includegraphics[scale=.62]{../data/harmosca/init}
+
+        Als letrztes Potential betrachte ich den Harmonischen Oszillator, 
+        da für ihn die Exakte werte bekannt sind.  In der Konfugurationsdatei
+        werden diese mit der Funktion \verb!energy! festegelgt:
+  			
 			  \lstinputlisting[language=Lua]{../presets/harmosca.lua}
 		
 			  \begin{center}\input{../data/harmosca/spectrum.tex.inc}\end{center}
@@ -755,7 +760,7 @@
   			\paragraph*{Konvergeznverhalten}
   			  \includegraphics[scale=.62]{../static/harmosc_konv.pdf}
   			  Die Abweichung vom Numerov Wert wird auch für dieses Potential
-  			  expoentiell kleiner und auch hier ist eine deutliche Überlagerung
+  			  kleiner und auch hier ist eine deutliche Überlagerung
   		    mit einer Schwingung zu sehen.
   		    
 	\section{Fazit}
@@ -770,7 +775,11 @@
 		mit einer eigenen Frequenz oszilliert, die man bei der Suche nicht 
 		berücksichtigen kann, da man sie apriori nicht wissen kann.
 		
-				
+	\section{Quellcode}
+	  Der Quellkode ist unter
+	  \url{https://github.com/xaberus/project3}
+	  veröffentlicht und lässt sich mit
+	  \verb!git clone git://github.com/xaberus/project3.git! herunterladen.
 			
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
