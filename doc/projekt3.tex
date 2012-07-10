@@ -605,7 +605,8 @@
          \mathrm{ls}(x,a) = \sum_{i = 0}^{k} (m(x_i - x, a) - f_i)^2
        \end{equation}
        
-       bezüglich $a$, wobei man für $x=x^{(0)}$ den Wert aus der Spline-Suche
+       bezüglich $a$, wobei man für $x=x^{(0)}$ den Wert aus der Spline- 
+       oder Akima-Suche
        benutzt. Auf diese Weise bekommt man den Wert $a^{(0)}$, mit dem man
        nun $\mathrm{ls}$ nach $x$ minimeiren kann und $x^{(1)}$ erhält.
        Falls $x^{(0)}$ nah
@@ -625,7 +626,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  	  \subsubsection*{Asymetrischer Doppeltopf}
+  	  \subsubsection{Asymetrischer Doppeltopf}
 			  \includegraphics[scale=.62]{../data/simple/init}
 
   		  Das erste Potential ist ein einfaches Polynom 4. Ordnung, wobei die
@@ -697,14 +698,18 @@
 	  		\includegraphics[scale=.62]{../data/simple/relen}
 		  	
 			  Wie man uas dem letzen Graphen entnehmen kann, wächst
-  			der relative Fehler für größere Energien exponentiell an.
+  			der relative Fehler für größere Energien an.
   			
   			\paragraph*{Konvergeznverhalten}
+  			  \includegraphics[scale=.62]{../static/simple_konv.pdf}
+  			  Die Abweichung vom Numerov Wert wird mit der Anzahl der
+  			  Zeitschritte kleiner, oszilliert aber
+  			  mit einer vom Peak abhängender Frequenz.
 			
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%			
-  	  \subsubsection*{Potentialkasten}
+  	  \subsubsection{Potentialkasten}
   			\includegraphics[scale=.62]{../data/square/init}
   			Als nächstes versuche ich bekannte Erbgebnisse für einen
 	  		unendlich tiefen Potentialkasten näherungsweise mit einem
@@ -725,7 +730,9 @@
 	  		mein Verfahren die ersten drei Energien nicht auflösen. Die 
 	  		Ergebnisse der reinen Spline-Suche bzw. Akima-Suche geben zwar einen
 	  		Wert, dieser schwankt aber signifikant um den erwarteten.
-
+	  		
+  			\paragraph*{Konvergeznverhalten}
+  			  \includegraphics[scale=.62]{../static/square_konv.pdf}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	  		
@@ -744,23 +751,26 @@
 	  		
 	  		Auch bei diesem Potential verringert sich der relative Fehler 
 	  		für größere Energiewerte.
-\newpage%%%%%%%%%%%%%%% <<<FINAL%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-  	\subsection{Harmonischer Oszillator}
-			%\includegraphics[scale=.62]{../harmosca/init}
-			
-			%\lstinputlisting[language=Lua]{../harmosca.lua}
-			
-			%\includegraphics[scale=.62]{../harmosca/corr}
-			%\includegraphics[scale=.62]{../harmosca/spektrum}
-			%\begin{center}\input{../harmosca/spectrum.tex.inc}\end{center}
-
+	  		
+  			\paragraph*{Konvergeznverhalten}
+  			  \includegraphics[scale=.62]{../static/harmosc_konv.pdf}
+  			  Die Abweichung vom Numerov Wert wird auch für dieses Potential
+  			  expoentiell kleiner und auch hier ist eine deutliche Überlagerung
+  		    mit einer Schwingung zu sehen.
+  		    
 	\section{Fazit}
 		Wie man aus der betrachtung der Spektra entnehmen kann, erlaubt die
-		Autokorrelations-Methode ziemlich zuverlässige und gut reptoduzierbare
-		Spektra zu generieren, d.h. die Spektra verändern sich nicht all zu sehr
-		bei kleinen Veränderungen der Parameter der Simulation. Um die eigentliche
-		Energiewerte zu betimmen, müsste man die gewonnenen Peaks geiegnet Fitten.
+		Autokorrelations-Methode immer die grobe Bestimmung eines Spektrums.
+		Auch behält dieses Spektrum bei kleinen Veränderungen der 
+		Simulationsparamter seine Form.
+		
+		
+		Für genaue Approximation von des Spektrums eignet sich diese Verfahren
+		leider nicht: Das Konvergenzverhalten ist so, dass jeder Peaks
+		mit einer eigenen Frequenz oszilliert, die man bei der Suche nicht 
+		berücksichtigen kann, da man sie apriori nicht wissen kann.
+		
+				
 			
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
