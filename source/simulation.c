@@ -613,12 +613,13 @@ double lorentz_gauss_ddda(double x, double a)
 
 array_t * complicated_spline_search(array_t * s, array_t * f, double dE, double win)
 {
-  array_t * h = array_intervalls(s);
+  /*array_t * h = array_intervalls(s);
   array_t * a = array_cspline_prepare(s, h, f);
   array_t * d = array_cspline_zroots(s, h, f, a, 1);
-
   free(a);
-  free(h);
+  free(h);*/
+
+  array_t * d = akima_search(s, f);
 
   int length = s->length;
   array_t * ds = array_pcopy(length, s->data);

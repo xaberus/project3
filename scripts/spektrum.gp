@@ -36,7 +36,7 @@ set tics out
 
 set noy2tics
 
-set y2range [-10 : 4]
+set y2range [-1 : 10]
 
 set autoscale  y
 #set autoscale y2
@@ -47,6 +47,6 @@ set logscale y
 
 plot \
   "dftcorr.dat" using 1:4 axis x1y1 with lines linestyle 3 title "|F[cw](eps)|", \
-  "spectrum.dat" using 1:(-1) axis x1y2 with impulses title "Peaks", \
+  "ccsen.dat" using 1:(-1) axis x1y2 with impulses title "Peaks", \
   "numen.dat" using 1:(1) axis x1y2 with impulses title "Numerov";
 

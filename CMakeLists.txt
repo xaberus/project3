@@ -15,8 +15,6 @@ set(BADNESS
 set(CMP "cmp" "cmp1" "cmp2")
 
 set(PRESETS
-  "test"
-
   "simple"
   "square"
   "harmosca"

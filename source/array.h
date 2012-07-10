@@ -38,7 +38,6 @@ array_t * array_new_sized(int length, int alloc);
 array_t * array_equipart(double start, double end, int points);
 array_t * array_append(array_t * z, double x);
 array_t * array_map(array_t * z, double (*fn)(double));
-array_t * array_mapv(array_t * z, double (*fn)(double, void*), void * arg);
 void array_dump_to_file(const char name[], const char sep[], int argc, ...);
 
 array_t * array_first_diff_3(double h, array_t * f, double gm, double gp);

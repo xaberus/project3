@@ -157,20 +157,6 @@ array_t * array_map(array_t * z, double (*fn)(double))
 }
 
 /*! \memberof array
- returns an array with r[i]=fn(z[i], arg) */
-array_t * array_mapv(array_t * z, double (*fn)(double, void*), void * arg)
-{
-  int length = z->length;
-  array_t * r = array_new(z->length);
-  double * d = r->data, * s = z->data;
-  for (int k = 0; k < length; k++) {
-    *(d++) = fn(*(s++), arg);
-  }
-  return r;
-}
-
-
-/*! \memberof array
  dumps \a argc arrays to file \a name */
 void array_dump_to_file(const char name[], const char sep[], int argc, ...)
 {
