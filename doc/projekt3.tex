@@ -252,7 +252,7 @@
 		Multiplikationsoperator wirkt. In dieser Basis besitzt $H$ eine Spektralzerlegung
 		der Form
 		\begin{equation*}
-			H = \int_{\sigma(H)}{\epsilon \mathrm{d}\mu(\epsilon)}
+			H = \int_{\sigma(H)}{\epsilon \mu(\mathrm{d}\epsilon)}
 		\end{equation*}
 		mit Spektralmaß $\mu(\epsilon)$ und Spektrum $\sigma(H)$.
 		Da $H$ nun ein Multiplikationsoperator ist, lässt sich der
@@ -268,51 +268,53 @@
 		\begin{multline}
 			\label{eq:corr}
 			c(t) = \langle \psi,U(t) \psi\rangle
-					 = \int_{x} \mu(\mathrm{d}x) \psi^{*} U(t) \psi \\
-					 = \int_{x}  \mu(\mathrm{d}x) \psi^{*}
-					 	  \int_{\sigma(H)}{\mu(\mathrm{d}\epsilon) \mathrm{e}^{-i t \epsilon}} \psi \\
+					 = \int_{x} \psi^{*}(x) U(t) \psi(x) \mathrm{d}x \\
+					 = \int_{x} \psi^{*}(x)
+					 	  \int_{\sigma(H)}{\mu(\mathrm{d}\epsilon)
+					 	    \mathrm{e}^{-i t \epsilon}} \psi(x) \mathrm{d}x \\
 					 = \int_{\sigma(H)}{
 					 			\mathrm{e}^{-i t \epsilon}
-					 			\int_{x}  \mu(\mathrm{d}x) \psi^{*}
-					 	 	   \mu(\mathrm{d}\epsilon)} \psi \\
+					 			 \int_{x} \psi^{*}(x) \mu(\mathrm{d}\epsilon) \psi(x) \mathrm{d}x} \\
 					 = \int_{\sigma(H)}{
 					 			\mathrm{e}^{-i t \epsilon}
-					 			\mathrm{d} \tilde{\mu}(\epsilon)}
+					 			\langle \psi,\mu(\mathrm{d}\epsilon)\psi \rangle
+					 			}
 		\end{multline}
-
+		
+		
 		Die inverse Fouriertransformation von $c(t)$ gibt ein moduliertes Spektrum
 		der Energieeigenwerte von H.
 
 		\begin{multline}
 			\label{eq:corrft}
-			c(\epsilon) = \mathcal{F}[c](\epsilon)
+			c(\epsilon) = \mathcal{F}^{*}[c](\epsilon)
 			      = \frac{1}{\sqrt{2 \pi}}
 			     		\int_{\mathbb{R}} c(t) \mathrm{e}^{it \epsilon} \mathrm{d}t\\
 			     = \frac{1}{\sqrt{2 \pi}}
 		     			\int_{\sigma(H)}
 				     		\int_{\mathbb{R}} \mathrm{e}^{i t (\epsilon -\epsilon')}	\mathrm{d}t
-					 		\mathrm{d} \tilde{\mu}(\epsilon')\\
+					 		\langle \psi,\mu(\mathrm{d}\epsilon')\psi \rangle\\
 			     = \sqrt{2 \pi}
 			     		\int_{\sigma(H)} \delta(\epsilon -\epsilon')
-					 		\mathrm{d} \tilde{\mu}(\epsilon')
+					 		\langle \psi,\mu(\mathrm{d}\epsilon')\psi \rangle
 		\end{multline}
 
 		Um die Bedeutung von $c(\epsilon)$ besser zu verstehen, betrachte man einen
 		etwas weniger allgemeinen Fall eines Systems mit isolierten Eigenwerten
-		($H$ kompakt und normal da selbtstadjungiert). In einer Basis in der
-		dieser Hamiltonian diagonal ist hat jeder Zustand besitzt eine Zerlegung
-		$\psi=\sum_{j}{a_j e_j}$ mit Eigenfunktionen $e_j$ zu Eigenenergieen $\epsilon_j$.
+		($H$ kompakt und normal da selbtstadjungiert). In einer Basis, in der
+		dieser Hamiltonian diagonal ist, besitzt jeder Zustand eine Zerlegung
+		$\psi=\sum_{j}{a_j e_j}$ mit Eigenfunktion $e_j$ zu Eigenenergie $\epsilon_j$.
 		Die Autokorrelation ist nach \eqref{eq:corr}
 		$c(t)= \sum_{j} |a_j|^2 \mathrm{e}^{-i t \epsilon_j}$ und das modulierte Spektrum
 		ist damit nach \eqref{eq:corrft}:
 		\begin{equation}
 			c(\epsilon)=\sqrt{2 \pi}
-				 \sum_{j} |a_j|^2 \mathrm{e}^{-i t \epsilon_j} \delta(\epsilon-\epsilon')
+				 \sum_{j} |a_j|^2 \delta(\epsilon-\epsilon'_j)
 		\end{equation}
 		Die $\delta$-Distribution in der letzten Formel kommt natürlich nur dann zustande,
 		wen über ganz $\mathbb{R}$ integriert wird. Für alle praktischen Zwecke steht
 		aber nur ein begrenztes Intervall $I=[0:T]$ zur Verfügung. Statt des echten
-		Spektrums	bekommt man nach nur die Faltung von $c(\epsilon)$ mit
+		Spektrums	bekommt man also nur die Faltung von $c(\epsilon)$ mit
 		$\mathcal{F}[w](\epsilon)$,
 		wobei $w(t)$ die Rechteck-Fensterfunktion mit Träger in I ist. Nach Faltungstheorem
 		erhält man:
